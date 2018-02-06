@@ -14,7 +14,7 @@ import shapeless.syntax.singleton._
 import shapeless.{:+:, CNil, Witness}
 import wom.graph.GraphNodePort.OutputPort
 import wom.graph.WomIdentifier
-import wom.graph.expression.{ExposedExpressionNode, ExpressionNode}
+import wom.graph.expression.{AnonymousExpressionNode, ExposedExpressionNode, ExpressionNode, PlainAnonymousExpressionNode}
 import wom.types.{WomStringType, WomType}
 import wom.values.WomValue
 
@@ -25,13 +25,26 @@ case class WorkflowStepInput(
   default: Option[CwlAny] = None,
   valueFrom: Option[StringOrExpression] = None) {
   
-  def toExpressionNode(sourceMappings: Map[String, OutputPort],
+  def parsedId(implicit parentName: ParentName) = FullyQualifiedName(id).id
+  
+  def toMergeNode(inputMappings: Map[String, OutputPort],
+                  expressionLib: ExpressionLib): Option[ErrorOr[ExpressionNode]] = {
+    lazy val identifier = WomIdentifier(id).combine("merge")
+    inputMappings.toList match {
+      case Nil => None
+      case head :: tail => 
+        val expression = WorkflowStepInputMergeExpression(this, head, tail.toMap, expressionLib)
+        Option(
+          AnonymousExpressionNode.fromInputMapping(identifier, expression, inputMappings, PlainAnonymousExpressionNode.apply)
+        )
+    }
+  }
+  
+  def toExpressionNode(valueFromExpression: StringOrExpression,
+                       sourceMappings:Map[String, OutputPort],
                        outputTypeMap: Map[String, WomType],
                        expressionLib: ExpressionLib
                       )(implicit parentName: ParentName): ErrorOr[ExpressionNode] = {
-
-    val sources = source.toList.flatMap(_.fold(WorkflowStepInputSourceToStrings))
-
     val inputs = sourceMappings.keySet
 
     def lookupId(id: String): ErrorOr[WomType] =
@@ -41,12 +54,12 @@ case class WorkflowStepInput(
 
     (for {
       //lookup each of our source Ids, failing if any of them are missing
-      inputTypes <- sources.traverse[ErrorOr, WomType](lookupId).toEither
+      inputTypes <- inputs.toList.traverse[ErrorOr, WomType](lookupId).toEither
       // we may have several sources, we make sure to have a type common to all of them.
       // In the case where there's no input source, we currently wrap the valueFrom value in a WomString (see WorkflowStepInputExpression)
       inputType = if (inputTypes.isEmpty) WomStringType else WomType.homogeneousTypeFromTypes(inputTypes)
-      womExpression = WorkflowStepInputExpression(this, inputType, inputs, expressionLib)
-      identifier = WomIdentifier(id)
+      womExpression = WorkflowStepInputExpression(parsedId, valueFromExpression, inputType, inputs, expressionLib)
+      identifier = WomIdentifier(id).combine("expression")
       ret <- ExposedExpressionNode.fromInputMapping(identifier, womExpression, inputType, sourceMappings).toEither
     } yield ret).toValidated
   }
@@ -54,6 +67,12 @@ case class WorkflowStepInput(
 
 object WorkflowStepInput {
   type InputSource = String :+: Array[String] :+: CNil
+
+  implicit class EnhancedStepInputMap[A](val map: Map[WorkflowStepInput, A]) extends AnyVal {
+    def asIdentifierMap(implicit parentName: ParentName): Map[String, A] = {
+      map.map({ case (stepInput, value) => stepInput.parsedId -> value })
+    }
+  }
 }
 
 object WorkflowStepInputSource {
