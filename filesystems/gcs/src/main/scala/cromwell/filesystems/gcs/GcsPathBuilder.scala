@@ -161,7 +161,7 @@ case class GcsPath private[gcs](nioPath: NioPath,
                                ) extends Path {
   lazy val blob = BlobId.of(cloudStoragePath.bucket, cloudStoragePath.toRealPath().toString)
 
-  override protected def newPath(nioPath: NioPath): GcsPath = GcsPath(nioPath, apiStorage, cloudStorage)
+  override def newPath(nioPath: NioPath): GcsPath = GcsPath(nioPath, apiStorage, cloudStorage)
 
   override def pathAsString: String = {
     val host = cloudStoragePath.bucket().stripSuffix("/")

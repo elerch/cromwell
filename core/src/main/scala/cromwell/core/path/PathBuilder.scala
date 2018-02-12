@@ -34,7 +34,7 @@ trait Path extends PathObjectMethods with NioPathMethods with BetterFileMethods 
     * @param nioPath The nioPath to be wrapped.
     * @return A new Path.
     */
-  protected def newPath(nioPath: NioPath): Path
+  def newPath(nioPath: NioPath): Path
 
   /**
     * Returns the path as a string. This path must be usable by this path builder or another in the list to build paths,

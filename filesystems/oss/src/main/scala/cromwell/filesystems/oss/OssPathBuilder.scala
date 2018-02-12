@@ -110,7 +110,7 @@ final case class BucketAndObj(bucket: String, obj: String)
 
 final case class OssPath private[oss](nioPath: NioPath) extends Path {
 
-  override protected def newPath(path: NioPath): OssPath = {
+  override def newPath(path: NioPath): OssPath = {
     OssPath(path)
   }
 
