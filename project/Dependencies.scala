@@ -9,7 +9,7 @@ object Dependencies {
   private val ammoniteOpsV = "1.0.1"
   private val apacheHttpClientV = "4.5.3"
   private val apacheHttpCoreV = "4.4.6"
-  private val awsSdkV = "1.11.289"
+  private val awsSdkV = "2.0.0-preview-9"
   private val betterFilesV = "2.17.1"
   private val catsEffectV = "0.10"
   private val catsV = "1.0.1"
@@ -225,7 +225,7 @@ object Dependencies {
   )
 
   private val awsCloudDependencies = List(
-    "com.amazonaws" % "aws-java-sdk" % awsSdkV
+    "software.amazon.awssdk" % "aws-sdk-java" % awsSdkV
   )
 
   private val googleCloudDependencies = List(
