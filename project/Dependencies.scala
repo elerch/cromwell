@@ -39,7 +39,7 @@ object Dependencies {
   private val grpcV = "1.5.0"
   private val guavaV = "22.0"
   private val hsqldbV = "2.3.4"
-  private val jacksonV = "2.8.9"
+  private val jacksonV = "2.9.4"
   private val janinoV = "3.0.7"
   private val jodaTimeV = "2.9.4"
   private val jsr305V = "3.0.0"
