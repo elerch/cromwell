@@ -36,7 +36,6 @@ import java.io.IOException
 import akka.actor.ActorRef
 import software.amazon.awssdk.core.auth.AwsCredentials
 import cromwell.filesystems.aws.batch.S3BatchCommandBuilder
-import cromwell.backend.impl.aws.AwsBatchInitializationActor.AuthFileAlreadyExistsException
 import cromwell.backend.standard.{StandardInitializationActor,
                                   StandardInitializationActorParams,
                                   StandardValidatedRuntimeAttributesBuilder}
@@ -44,7 +43,6 @@ import cromwell.backend.{BackendConfigurationDescriptor,
                          BackendInitializationData, BackendWorkflowDescriptor}
 import cromwell.core.io.AsyncIoActorClient
 import cromwell.core.path.Path
-import spray.json.{JsObject, JsTrue}
 import wom.graph.CommandCallNode
 
 import scala.concurrent.Future
@@ -71,7 +69,7 @@ class AwsBatchInitializationActor(params: AwsBatchInitializationActorParams)
 
   override lazy val ioActor = params.ioActor
   private val configuration = params.configuration
-  implicit private val system = context.system
+  override implicit val system = context.system
 
   override lazy val runtimeAttributesBuilder: StandardValidatedRuntimeAttributesBuilder =
     AwsBatchRuntimeAttributes.runtimeAttributesBuilder(configuration)

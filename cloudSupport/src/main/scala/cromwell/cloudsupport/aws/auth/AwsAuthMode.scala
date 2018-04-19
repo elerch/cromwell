@@ -30,8 +30,6 @@
  */
 package cromwell.cloudsupport.aws.auth
 
-import java.io.{ByteArrayInputStream, FileNotFoundException}
-
 import software.amazon.awssdk.core.auth.{AwsCredentials,
                                          AwsSessionCredentials,
                                          AnonymousCredentialsProvider,
@@ -40,7 +38,6 @@ import software.amazon.awssdk.core.auth.{AwsCredentials,
 import software.amazon.awssdk.core.regions.Region
 import software.amazon.awssdk.services.sts.{STSClient}
 import software.amazon.awssdk.services.sts.model.{GetCallerIdentityRequest,
-                                                  GetCallerIdentityResponse,
                                                   AssumeRoleRequest}
 
 import cromwell.cloudsupport.aws.auth.AwsAuthMode.OptionLookup

@@ -31,8 +31,6 @@
 
 package cromwell.cloudsupport.aws
 
-import java.io.IOException
-
 import cats.data.Validated._
 import cats.instances.list._
 import cats.syntax.traverse._
@@ -62,7 +60,6 @@ final case class AwsConfiguration private (applicationName: String,
 }
 
 object AwsConfiguration {
-  import scala.collection.JavaConverters._
   import scala.concurrent.duration._
   import scala.language.postfixOps
 

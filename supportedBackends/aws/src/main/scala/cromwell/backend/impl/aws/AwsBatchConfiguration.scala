@@ -33,7 +33,7 @@ package cromwell.backend.impl.aws
 
 import cromwell.filesystems.aws.S3PathBuilderFactory
 import cromwell.backend.BackendConfigurationDescriptor
-import cromwell.core.{BackendDockerConfiguration,DockerCredentials}
+import cromwell.core.{BackendDockerConfiguration}
 import cromwell.cloudsupport.aws.AwsConfiguration
 
 class AwsBatchConfiguration(val configurationDescriptor: BackendConfigurationDescriptor) {

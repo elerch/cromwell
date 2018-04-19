@@ -32,7 +32,6 @@ package cromwell.filesystems.aws
 
 import java.net.URI
 import java.nio.file.Paths
-import akka.actor.ActorSystem
 import com.google.common.net.UrlEscapers
 import software.amazon.awssdk.core.auth.AwsCredentials
 import software.amazon.awssdk.services.s3.{S3AdvancedConfiguration,S3Client}

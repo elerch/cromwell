@@ -35,17 +35,11 @@ import java.net.SocketTimeoutException
 
 import _root_.io.grpc.Status
 import akka.actor.ActorRef
-import cats.data.Validated.{Invalid, Valid}
 import common.util.StringUtil._
-import common.validation.ErrorOr._
 import common.validation.Validation._
 import cromwell.backend._
-import cromwell.backend.async.{AbortedExecutionHandle, ExecutionHandle,
-                               FailedNonRetryableExecutionHandle,
-                               FailedRetryableExecutionHandle,
-                               PendingExecutionHandle}
+import cromwell.backend.async.{AbortedExecutionHandle, ExecutionHandle, PendingExecutionHandle}
 import cromwell.backend.impl.aws.RunStatus.TerminalRunStatus
-import cromwell.backend.impl.aws.errors.FailedToDelocalizeFailure
 import cromwell.backend.impl.aws.io._
 import cromwell.backend.io.DirectoryFunctions
 import cromwell.backend.standard.{StandardAsyncExecutionActor, StandardAsyncExecutionActorParams, StandardAsyncJob}
@@ -65,7 +59,6 @@ import wom.expression.NoIoFunctionSet
 import wom.types.{WomArrayType, WomSingleFileType}
 import wom.values._
 
-import scala.collection.JavaConverters._
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps

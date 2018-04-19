@@ -31,9 +31,8 @@
 package cromwell.backend.impl.aws.io
 
 import cats.data.Validated._
-import cats.syntax.apply._
 import cats.syntax.validated._
-import software.amazon.awssdk.services.batch.model.{Volume, MountPoint, Host}
+import software.amazon.awssdk.services.batch.model.{Volume, Host}
 import cromwell.core.path.{DefaultPathBuilder, Path}
 import common.exception.MessageAggregation
 import common.validation.ErrorOr._

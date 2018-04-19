@@ -33,7 +33,6 @@ package cromwell.backend.impl.aws
 
 import cromwell.core.ExecutionEvent
 import _root_.io.grpc.Status
-import scala.util.Try
 
 sealed trait RunStatus {
   import RunStatus._

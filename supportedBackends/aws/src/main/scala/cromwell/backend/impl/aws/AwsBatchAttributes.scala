@@ -34,14 +34,10 @@ package cromwell.backend.impl.aws
 import java.net.{URI, URL}
 
 import cats.data.Validated._
-import cats.syntax.apply._
-import cats.syntax.validated._
 import com.typesafe.config.{Config, ConfigValue}
 import cromwell.cloudsupport.aws.auth.AwsAuthMode
 import cromwell.backend.impl.aws.callcaching.{CopyCachedOutputs, AwsBatchCacheHitDuplicationStrategy, UseOriginalCachedOutputs}
 import cromwell.cloudsupport.aws.AwsConfiguration
-import eu.timepit.refined.api.Refined
-import eu.timepit.refined.numeric.Positive
 import common.exception.MessageAggregation
 import common.validation.ErrorOr._
 import common.validation.Validation._

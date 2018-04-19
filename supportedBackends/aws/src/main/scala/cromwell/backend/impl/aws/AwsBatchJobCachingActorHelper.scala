@@ -34,12 +34,8 @@ package cromwell.backend.impl.aws
 import akka.actor.Actor
 import cromwell.backend.impl.aws.io.{AwsBatchVolume, AwsBatchWorkingDisk}
 import cromwell.backend.standard.StandardCachingActorHelper
-import cromwell.core.labels.Labels
 import cromwell.core.logging.JobLogging
 import cromwell.core.path.Path
-import cromwell.services.metadata.CallMetadataKeys
-
-import scala.language.postfixOps
 
 trait AwsBatchJobCachingActorHelper extends StandardCachingActorHelper {
   this: Actor with JobLogging =>

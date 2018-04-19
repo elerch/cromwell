@@ -31,23 +31,19 @@
 
 package cromwell.backend.impl.aws
 
-import akka.actor.{ActorRef,Props}
+import akka.actor.{ActorRef}
 import cromwell.backend.{BackendConfigurationDescriptor,
                          BackendWorkflowDescriptor,
                          BackendInitializationData,
                          JobExecutionMap}
-import cromwell.backend.impl.aws.callcaching.{AwsBatchBackendCacheHitCopyingActor, AwsBatchBackendFileHashingActor}
 import cromwell.backend.standard.{StandardLifecycleActorFactory,
                                   StandardAsyncExecutionActor,
                                   StandardInitializationActor,
                                   StandardFinalizationActor,
                                   StandardInitializationActorParams,
                                   StandardFinalizationActorParams}
-import cromwell.backend.standard.callcaching.{StandardCacheHitCopyingActor, StandardFileHashingActor}
 import cromwell.core.CallOutputs
 import wom.graph.CommandCallNode
-
-import scala.util.{Success, Try}
 
 case class AwsBatchBackendLifecycleActorFactory(
   name: String,

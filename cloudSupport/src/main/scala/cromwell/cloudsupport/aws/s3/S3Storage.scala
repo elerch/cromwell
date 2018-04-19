@@ -33,7 +33,6 @@ package cromwell.cloudsupport.aws.s3
 import software.amazon.awssdk.services.s3.S3AdvancedConfiguration
 import software.amazon.awssdk.services.s3.S3Client
 import software.amazon.awssdk.core.auth.{AwsCredentials, StaticCredentialsProvider}
-import cromwell.cloudsupport.aws.AwsConfiguration
 import com.typesafe.config.ConfigFactory
 import net.ceedubs.ficus.Ficus._ // scalastyle:ignore
 

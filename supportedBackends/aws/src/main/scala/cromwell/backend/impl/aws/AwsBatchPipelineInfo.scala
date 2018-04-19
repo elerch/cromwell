@@ -33,11 +33,11 @@ package cromwell.backend.impl.aws
 
 import wdl4s.parser.MemoryUnit
 import software.amazon.awssdk.services.batch.model.{
-                                        KeyValuePair,
-                                        ContainerProperties,
-                                        MountPoint,
-                                        Ulimit,
-                                        Volume,
+                                        // KeyValuePair,
+                                        ContainerProperties //,
+                                        // MountPoint,
+                                        // Ulimit,
+                                        // Volume,
                                       }
 
 import scala.collection.JavaConverters._
