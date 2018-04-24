@@ -50,10 +50,11 @@ import scala.util.matching.Regex
  */
 
 object AwsBatchVolume {
-  val Identifier = "[a-zA-Z0-9-_]{,255}"
+  val Identifier = "[a-zA-Z0-9-_]{1,255}"
   val Directory = """/[^\s]+""" 
-  val WorkingDiskPattern: Regex = s"""${AwsBatchWorkingDisk.Name}\s+($Identifier)""".r
-  val MountedDiskPattern: Regex = s"""($Directory)\s+($Identifier)""".r
+  val WorkingDiskPattern: Regex = s"""${AwsBatchWorkingDisk.Name}\\s+($Identifier)""".r
+  val MountedDiskPattern: Regex = s"""($Directory)\\s+($Identifier)""".r
+  val LocalDiskPattern: Regex = s"""local-disk""".r
 
   def parse(s: String): Try[AwsBatchVolume] = {
 
@@ -63,6 +64,7 @@ object AwsBatchVolume {
     // Thought: follow whatever format for the short form CLI version. Though
     // I'm not a fan of that format, it's at least consistent
     val validation: ErrorOr[AwsBatchVolume] = s match {
+      case LocalDiskPattern() => Valid(AwsBatchWorkingDisk())
       case WorkingDiskPattern() => Valid(AwsBatchWorkingDisk())
       case MountedDiskPattern(mountPoint) => Valid(AwsBatchEmptyMountedDisk(DefaultPathBuilder.get(mountPoint)))
       case _ => s"Disk strings should be of the format 'local-disk' or '/mount/point SIZE TYPE' but got: '$s'".invalidNel

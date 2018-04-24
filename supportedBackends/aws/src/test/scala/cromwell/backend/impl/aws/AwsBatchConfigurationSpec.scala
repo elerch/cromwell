@@ -57,17 +57,17 @@ class AwsBatchConfigurationSpec extends FlatSpec with Matchers with TableDrivenP
       |  auths = [
       |    {
       |      name = "application-default"
-      |      scheme = "application_default"
+      |      scheme = "default"
       |    },
       |    {
       |      name = "user-via-refresh"
-      |      scheme = "refresh_token"
+      |      scheme = "custom_keys"
       |      access-key = "secret_key"
       |      secret-key = "${mockFile.pathAsString}"
       |    },
       |    {
       |      name = "service-account"
-      |      scheme = "service_account"
+      |      scheme = "default"
       |    }
       |  ]
       |}
@@ -112,7 +112,6 @@ class AwsBatchConfigurationSpec extends FlatSpec with Matchers with TableDrivenP
     val configs = Table(
       ("backendConfig", "globalConfig"),
       (backendConfig, globalConfig.withoutPath("aws")),
-      (backendConfig.withoutPath("project"), globalConfig),
       (backendConfig.withoutPath("root"), globalConfig),
       (backendConfig.withoutPath("filesystems"), globalConfig),
       (backendConfig.withoutPath("filesystems.s3"), globalConfig),

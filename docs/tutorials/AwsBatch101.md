@@ -165,3 +165,33 @@ You might find the following tutorials interesting to tackle next:
 
 * [Persisting Data Between Restarts](PersistentServer)
 * [Server Mode](ServerMode.md)
+
+### Configuration Reference
+
+Auth configuration. This requires a "name" and a "scheme".  Authentication schemes are:
+
+* default: This uses the default authentication provider, which uses
+  standard AWS search paths (Environment variables, configuration file, instance metadata)
+  to determine access key and secret key
+* custom_keys: This requires the definition of "access-key" and "secret-key"
+* assume_role: This requires the definition of "base-auth" and "role-arn". An optional "external-id" can be provided
+
+More config:
+
+concurrent-job-limit
+root
+dockerhub
+dockerhub.account
+dockerhub.token
+filesystems
+filesystems.s3.auth
+filesystems.s3.caching.duplication-strategy
+default-runtime-attributes
+default-runtime-attributes.disks
+default-runtime-attributes.memory
+default-runtime-attributes.zones
+default-runtime-attributes.continueOnReturnCode
+default-runtime-attributes.cpu
+default-runtime-attributes.noAddress
+default-runtime-attributes.docker
+default-runtime-attributes.failOnStderr

@@ -42,7 +42,7 @@ object AwsBatchTestConfig {
       |
       |filesystems {
       |  s3 {
-      |    auth = "application-default"
+      |    auth = "default"
       |  }
       |}
       |
@@ -65,7 +65,7 @@ object AwsBatchTestConfig {
       |
       |filesystems {
       |  s3 {
-      |    auth = "application-default"
+      |    auth = "default"
       |  }
       |}
       |""".stripMargin
@@ -76,8 +76,8 @@ object AwsBatchTestConfig {
        |  application-name = "cromwell"
        |  auths = [
        |    {
-       |      name = "application-default"
-       |      scheme = "application_default"
+       |      name = "default"
+       |      scheme = "default"
        |    }
        |  ]
        |}

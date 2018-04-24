@@ -40,12 +40,13 @@ import wdl.transforms.draft2.wdlom2wom.WdlDraft2WomExecutableMakers._
 import wom.transforms.WomExecutableMaker.ops._
 import wom.transforms.WomWorkflowDefinitionMaker.ops._
 import akka.actor.{ActorRef, Props}
-import akka.testkit.{ImplicitSender, TestActorRef, TestDuration, TestProbe}
+import akka.testkit.{ImplicitSender, TestActorRef, TestDuration} // TestProbe
 import software.amazon.awssdk.core.auth.AnonymousCredentialsProvider
-import cromwell.backend.BackendJobExecutionActor.{BackendJobExecutionResponse, JobFailedNonRetryableResponse, JobFailedRetryableResponse}
+// import cromwell.backend.BackendJobExecutionActor.{BackendJobExecutionResponse, JobFailedNonRetryableResponse, JobFailedRetryableResponse}
+import cromwell.backend.BackendJobExecutionActor.BackendJobExecutionResponse
 import cromwell.backend._
-import cromwell.backend.async.AsyncBackendJobExecutionActor.Execute
-import cromwell.backend.async.{AbortedExecutionHandle, ExecutionHandle, FailedNonRetryableExecutionHandle, FailedRetryableExecutionHandle}
+// import cromwell.backend.async.AsyncBackendJobExecutionActor.{Execute, ExecutionMode}
+import cromwell.backend.async.{AbortedExecutionHandle, ExecutionHandle, FailedNonRetryableExecutionHandle } //FailedRetryableExecutionHandle
 import cromwell.backend.impl.aws.AwsBatchAsyncBackendJobExecutionActor.AwsBatchPendingExecutionHandle
 import cromwell.backend.impl.aws.RunStatus.UnsuccessfulRunStatus
 import cromwell.backend.impl.aws.io.AwsBatchWorkingDisk
@@ -64,7 +65,7 @@ import cromwell.services.keyvalue.KeyValueServiceActor.KvResponse
 import cromwell.util.JsonFormatting.WomValueJsonFormatter._
 import cromwell.util.SampleWdl
 import org.scalatest._
-import org.scalatest.prop.Tables.Table
+// import org.scalatest.prop.Tables.Table
 import org.slf4j.Logger
 import org.specs2.mock.Mockito
 import spray.json._
@@ -75,7 +76,7 @@ import wom.types._
 import wom.values._
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future, Promise}
+import scala.concurrent.{Await, Future, Promise} // ExecutionContext
 import scala.language.postfixOps
 import scala.util.Success
 
@@ -209,42 +210,44 @@ class AwsBatchAsyncBackendJobExecutionActorSpec extends TestKitSuite("AwsBatchAs
     }
   }
 
-  private def executionActor(jobDescriptor: BackendJobDescriptor,
-                             configurationDescriptor: BackendConfigurationDescriptor,
-                             promise: Promise[BackendJobExecutionResponse],
-                             singletonActor: ActorRef
-                             ): ActorRef = {
+  // private def executionActor(jobDescriptor: BackendJobDescriptor,
+  //                            configurationDescriptor: BackendConfigurationDescriptor,
+  //                            promise: Promise[BackendJobExecutionResponse],
+  //                            singletonActor: ActorRef
+  //                            ): ActorRef = {
+  //
+  //   val job = StandardAsyncJob(UUID.randomUUID().toString)
+  //   val run = Run(job)
+  //   val handle = new AwsBatchPendingExecutionHandle(jobDescriptor, run.job, Option(run), None)
+  //
+  //   class ExecuteOrRecoverActor extends TestableAwsBatchJobExecutionActor(jobDescriptor, promise, configuration, singletonActor = singletonActor) {
+  //     override def executeOrRecover(mode: ExecutionMode)(implicit ec: ExecutionContext): Future[ExecutionHandle] = {
+  //       Future.successful(handle)
+  //     }
+  //   }
+  //
+  //   system.actorOf(Props(new ExecuteOrRecoverActor), "ExecuteOrRecoverActor-" + UUID.randomUUID)
+  // }
 
-    // val job = StandardAsyncJob(UUID.randomUUID().toString)
-    // val run = Run(job)
-    // val handle = new AwsBatchPendingExecutionHandle(jobDescriptor, run.job, Option(run), None)
-
-    // TODO: Sort this stuff out
-    class ExecuteOrRecoverActor extends TestableAwsBatchJobExecutionActor(jobDescriptor, promise, configuration, singletonActor = singletonActor) {
-    }
-
-    system.actorOf(Props(new ExecuteOrRecoverActor), "ExecuteOrRecoverActor-" + UUID.randomUUID)
-  }
-
-  private def runAndFail(previousPreemptions: Int, previousUnexpectedRetries: Int, errorCode: Status, innerErrorMessage: String): BackendJobExecutionResponse = {
-
-    // val runStatus = UnsuccessfulRunStatus("test", "failed", errorCode, Option(innerErrorMessage), Seq.empty)
-    val statusPoller = TestProbe()
-
-    val promise = Promise[BackendJobExecutionResponse]()
-    val jobDescriptor =  buildJobDescriptor()
-
-    // TODO: Use this to check the new KV entries are there!
-    //val kvProbe = TestProbe()
-
-    val backend = executionActor(jobDescriptor, AwsBatchBackendConfigurationDescriptor, promise, statusPoller.ref)
-    backend ! Execute
-    // statusPoller.expectMsgPF(max = Timeout, hint = "awaiting status poll") {
-    //   case _: DoPoll => backend ! runStatus
-    // }
-
-    Await.result(promise.future, Timeout)
-  }
+  // private def runAndFail(previousPreemptions: Int, previousUnexpectedRetries: Int, errorCode: Status, innerErrorMessage: String): BackendJobExecutionResponse = {
+  //
+  //   // val runStatus = UnsuccessfulRunStatus("test", "failed", errorCode, Option(innerErrorMessage), Seq.empty)
+  //   val statusPoller = TestProbe()
+  //
+  //   val promise = Promise[BackendJobExecutionResponse]()
+  //   val jobDescriptor =  buildJobDescriptor()
+  //
+  //   // TODO: Use this to check the new KV entries are there!
+  //   //val kvProbe = TestProbe()
+  //
+  //   val backend = executionActor(jobDescriptor, AwsBatchBackendConfigurationDescriptor, promise, statusPoller.ref)
+  //   backend ! Execute
+  //   // statusPoller.expectMsgPF(max = Timeout, hint = "awaiting status poll") {
+  //   //   case _: DoPoll => backend ! runStatus
+  //   // }
+  //
+  //   Await.result(promise.future, Timeout)
+  // }
 
   def buildTestActorRef(attempt: Int): TestActorRef[TestableAwsBatchJobExecutionActor] = {
     // For this test we say that all previous attempts were preempted:
@@ -261,116 +264,114 @@ class AwsBatchAsyncBackendJobExecutionActorSpec extends TestKitSuite("AwsBatchAs
 
   val timeout = 25 seconds
 
-  { // Set of "handle call failures appropriately with respect to preemption and failure" tests
-    val expectations = Table(
-      ("previous_preemptions", "previous_unexpectedRetries", "errorCode", "message", "shouldRetry"),
-      // No preemptible attempts allowed, but standard failures should be retried.
-      (0, 0, Status.ABORTED, "13: retryable error", true), // This is the new "unexpected failure" mode, which is now retried
-      (0, 1, Status.ABORTED, "13: retryable error", true),
-      (0, 2, Status.ABORTED, "13: retryable error", false), // The third unexpected failure is a real failure.
-      (0, 0, Status.ABORTED, "14: usually means preempted...?", false), // Usually means "preempted', but this wasn't a preemptible VM, so this should just be a failure.
-      (0, 0, Status.ABORTED, "15: other error", false),
-      (0, 0, Status.OUT_OF_RANGE, "13: unexpected error", false),
-      (0, 0, Status.OUT_OF_RANGE, "14: test error msg", false),
-      // These commented out tests should be uncommented if/when we stop mapping 13 to 14 in preemption mode
-      // 1 preemptible attempt allowed, but not all failures represent preemptions.
-//      (0, 0, Status.ABORTED, "13: retryable error", true),
-//      (0, 1, Status.ABORTED, "13: retryable error", true),
-//      (0, 2, Status.ABORTED, "13: retryable error", false),
-      // The following 13 based test should be removed if/when we stop mapping 13 to 14 in preemption mode
-      (0, 0, Status.ABORTED, "13: retryable error", true),
-      (0, 0, Status.ABORTED, "14: preempted", true),
-      (0, 0, Status.UNKNOWN, "Instance failed to start due to preemption.", true),
-      (0, 0, Status.ABORTED, "15: other error", false),
-      (0, 0, Status.OUT_OF_RANGE, "13: retryable error", false),
-      (0, 0, Status.OUT_OF_RANGE, "14: preempted", false),
-      (0, 0, Status.OUT_OF_RANGE, "Instance failed to start due to preemption.", false),
-      // 1 preemptible attempt allowed, but since we're now on the second preemption attempt only 13s should be retryable.
-      (1, 0, Status.ABORTED, "13: retryable error", true),
-      (1, 1, Status.ABORTED, "13: retryable error", true),
-      (1, 2, Status.ABORTED, "13: retryable error", false),
-      (1, 0, Status.ABORTED, "14: preempted", false),
-      (1, 0, Status.UNKNOWN, "Instance failed to start due to preemption.", false),
-      (1, 0, Status.ABORTED, "15: other error", false),
-      (1, 0, Status.OUT_OF_RANGE, "13: retryable error", false),
-      (1, 0, Status.OUT_OF_RANGE, "14: preempted", false),
-      (1, 0, Status.OUT_OF_RANGE, "Instance failed to start due to preemption.", false)
-    )
-
-    expectations foreach { case (previousPreemptions, previousUnexpectedRetries, errorCode, innerErrorMessage, shouldRetry) =>
-      val descriptor = s"previousPreemptions=$previousPreemptions, previousUnexpectedRetries=$previousUnexpectedRetries errorCode=$errorCode, innerErrorMessage=$innerErrorMessage"
-      it should s"handle call failures appropriately with respect to preemption and failure ($descriptor)" in {
-        runAndFail(previousPreemptions, previousUnexpectedRetries, errorCode, innerErrorMessage) match {
-          case response: JobFailedNonRetryableResponse =>
-            if(shouldRetry) fail(s"A should-be-retried job ($descriptor) was sent back to the engine with: $response")
-          case response: JobFailedRetryableResponse =>
-            if(!shouldRetry) fail(s"A shouldn't-be-retried job ($descriptor) was sent back to the engine with $response")
-          case huh => fail(s"Unexpected response: $huh")
-        }
-      }
-    }
-  }
+//   { // Set of "handle call failures appropriately with respect to preemption and failure" tests
+//     val expectations = Table(
+//       ("previous_preemptions", "previous_unexpectedRetries", "errorCode", "message", "shouldRetry"),
+//       // No preemptible attempts allowed, but standard failures should be retried.
+//       (0, 0, Status.ABORTED, "13: retryable error", true), // This is the new "unexpected failure" mode, which is now retried
+//       (0, 1, Status.ABORTED, "13: retryable error", true),
+//       (0, 2, Status.ABORTED, "13: retryable error", false), // The third unexpected failure is a real failure.
+//       (0, 0, Status.ABORTED, "14: usually means preempted...?", false), // Usually means "preempted', but this wasn't a preemptible VM, so this should just be a failure.
+//       (0, 0, Status.ABORTED, "15: other error", false),
+//       (0, 0, Status.OUT_OF_RANGE, "13: unexpected error", false),
+//       (0, 0, Status.OUT_OF_RANGE, "14: test error msg", false),
+//       // These commented out tests should be uncommented if/when we stop mapping 13 to 14 in preemption mode
+//       // 1 preemptible attempt allowed, but not all failures represent preemptions.
+// //      (0, 0, Status.ABORTED, "13: retryable error", true),
+// //      (0, 1, Status.ABORTED, "13: retryable error", true),
+// //      (0, 2, Status.ABORTED, "13: retryable error", false),
+//       // The following 13 based test should be removed if/when we stop mapping 13 to 14 in preemption mode
+//       (0, 0, Status.ABORTED, "14: preempted", true),
+//       (0, 0, Status.UNKNOWN, "Instance failed to start due to preemption.", true),
+//       (0, 0, Status.OUT_OF_RANGE, "13: retryable error", false),
+//       (0, 0, Status.OUT_OF_RANGE, "14: preempted", false),
+//       (0, 0, Status.OUT_OF_RANGE, "Instance failed to start due to preemption.", false),
+//       // 1 preemptible attempt allowed, but since we're now on the second preemption attempt only 13s should be retryable.
+//       (1, 0, Status.ABORTED, "13: retryable error", true),
+//       (1, 1, Status.ABORTED, "13: retryable error", true),
+//       (1, 2, Status.ABORTED, "13: retryable error", false),
+//       (1, 0, Status.ABORTED, "14: preempted", false),
+//       (1, 0, Status.UNKNOWN, "Instance failed to start due to preemption.", false),
+//       (1, 0, Status.ABORTED, "15: other error", false),
+//       (1, 0, Status.OUT_OF_RANGE, "13: retryable error", false),
+//       (1, 0, Status.OUT_OF_RANGE, "14: preempted", false),
+//       (1, 0, Status.OUT_OF_RANGE, "Instance failed to start due to preemption.", false)
+//     )
+//
+//     expectations foreach { case (previousPreemptions, previousUnexpectedRetries, errorCode, innerErrorMessage, shouldRetry) =>
+//       val descriptor = s"previousPreemptions=$previousPreemptions, previousUnexpectedRetries=$previousUnexpectedRetries errorCode=$errorCode, innerErrorMessage=$innerErrorMessage"
+//       it should s"handle call failures appropriately with respect to preemption and failure ($descriptor)" in {
+//         runAndFail(previousPreemptions, previousUnexpectedRetries, errorCode, innerErrorMessage) match {
+//           case response: JobFailedNonRetryableResponse =>
+//             if(shouldRetry) fail(s"A should-be-retried job ($descriptor) was sent back to the engine with: $response")
+//           case response: JobFailedRetryableResponse =>
+//             if(!shouldRetry) fail(s"A shouldn't-be-retried job ($descriptor) was sent back to the engine with $response")
+//           case huh => fail(s"Unexpected response: $huh")
+//         }
+//       }
+//     }
+//   }
 
   // TODO: Rework all this stuff
-  it should "not restart 2 of 1 unexpected shutdowns without another preemptible VM" in {
-    val actorRef = buildTestActorRef(1)
-    val backend = actorRef.underlyingActor
-    val runId = StandardAsyncJob(UUID.randomUUID().toString)
-    val handle = new AwsBatchPendingExecutionHandle(null, runId, None, None)
-
-    // TODO: Get real error messages
-    val failedStatus = UnsuccessfulRunStatus("test", "200", Status.ABORTED, Option("14: VM XXX shut down unexpectedly."), Seq.empty)
-    val executionResult = backend.handleExecutionResult(failedStatus, handle)
-    val result = Await.result(executionResult, timeout)
-    result.isInstanceOf[FailedNonRetryableExecutionHandle] shouldBe true
-    val failedHandle = result.asInstanceOf[FailedNonRetryableExecutionHandle]
-    failedHandle.returnCode shouldBe None
-  }
-
-  it should "restart 1 of 1 unexpected shutdowns without another preemptible VM" in {
-    val actorRef = buildTestActorRef(1)
-    val backend = actorRef.underlyingActor
-    val runId = StandardAsyncJob(UUID.randomUUID().toString)
-    val handle = new AwsBatchPendingExecutionHandle(null, runId, None, None)
-
-    val failedStatus = UnsuccessfulRunStatus("test", "200", Status.ABORTED, Option("14: VM XXX shut down unexpectedly."), Seq.empty)
-    val executionResult = backend.handleExecutionResult(failedStatus, handle)
-    val result = Await.result(executionResult, timeout)
-    result.isInstanceOf[FailedRetryableExecutionHandle] shouldBe true
-    val retryableHandle = result.asInstanceOf[FailedRetryableExecutionHandle]
-    retryableHandle.returnCode shouldBe None
-    retryableHandle.throwable.getMessage should include("will be restarted with a non-preemptible VM")
-  }
-
-  it should "restart 1 of 2 unexpected shutdowns with another preemptible VM" in {
-    val actorRef = buildTestActorRef(2)
-    val backend = actorRef.underlyingActor
-    val runId = StandardAsyncJob(UUID.randomUUID().toString)
-    val handle = new AwsBatchPendingExecutionHandle(null, runId, None, None)
-
-    val failedStatus = UnsuccessfulRunStatus("test", "200", Status.ABORTED, Option("14: VM XXX shut down unexpectedly."), Seq.empty)
-    val executionResult = backend.handleExecutionResult(failedStatus, handle)
-    val result = Await.result(executionResult, timeout)
-    result.isInstanceOf[FailedRetryableExecutionHandle] shouldBe true
-    val retryableHandle = result.asInstanceOf[FailedRetryableExecutionHandle]
-    retryableHandle.returnCode shouldBe None
-    retryableHandle.throwable.getMessage should include("will be restarted with another preemptible VM")
-  }
-
-  it should "handle message 13 (TODO: fix this)" in {
-    val actorRef = buildTestActorRef(2)
-    val backend = actorRef.underlyingActor
-    val runId = StandardAsyncJob(UUID.randomUUID().toString)
-    val handle = new AwsBatchPendingExecutionHandle(null, runId, None, None)
-
-    val failedStatus = UnsuccessfulRunStatus("test", "200", Status.ABORTED, Option("13: Retryable Error."), Seq.empty)
-    val executionResult = backend.handleExecutionResult(failedStatus, handle)
-    val result = Await.result(executionResult, timeout)
-    result.isInstanceOf[FailedRetryableExecutionHandle] shouldBe true
-    val retryableHandle = result.asInstanceOf[FailedRetryableExecutionHandle]
-    retryableHandle.returnCode shouldBe None
-    retryableHandle.throwable.getMessage should include("will be restarted with another preemptible VM")
-  }
+  // it should "not restart 2 of 1 unexpected shutdowns without another preemptible VM" in {
+  //   val actorRef = buildTestActorRef(1)
+  //   val backend = actorRef.underlyingActor
+  //   val runId = StandardAsyncJob(UUID.randomUUID().toString)
+  //   val handle = new AwsBatchPendingExecutionHandle(null, runId, None, None)
+  //
+  //   // TODO: Get real error messages
+  //   val failedStatus = UnsuccessfulRunStatus("test", "200", Status.ABORTED, Option("14: VM XXX shut down unexpectedly."), Seq.empty)
+  //   val executionResult = backend.handleExecutionResult(failedStatus, handle)
+  //   val result = Await.result(executionResult, timeout)
+  //   result.isInstanceOf[FailedNonRetryableExecutionHandle] shouldBe true
+  //   val failedHandle = result.asInstanceOf[FailedNonRetryableExecutionHandle]
+  //   failedHandle.returnCode shouldBe None
+  // }
+  //
+  // it should "restart 1 of 1 unexpected shutdowns without another preemptible VM" in {
+  //   val actorRef = buildTestActorRef(1)
+  //   val backend = actorRef.underlyingActor
+  //   val runId = StandardAsyncJob(UUID.randomUUID().toString)
+  //   val handle = new AwsBatchPendingExecutionHandle(null, runId, None, None)
+  //
+  //   val failedStatus = UnsuccessfulRunStatus("test", "200", Status.ABORTED, Option("14: VM XXX shut down unexpectedly."), Seq.empty)
+  //   val executionResult = backend.handleExecutionResult(failedStatus, handle)
+  //   val result = Await.result(executionResult, timeout)
+  //   result.isInstanceOf[FailedRetryableExecutionHandle] shouldBe true
+  //   val retryableHandle = result.asInstanceOf[FailedRetryableExecutionHandle]
+  //   retryableHandle.returnCode shouldBe None
+  //   retryableHandle.throwable.getMessage should include("will be restarted with a non-preemptible VM")
+  // }
+  //
+  // it should "restart 1 of 2 unexpected shutdowns with another preemptible VM" in {
+  //   val actorRef = buildTestActorRef(2)
+  //   val backend = actorRef.underlyingActor
+  //   val runId = StandardAsyncJob(UUID.randomUUID().toString)
+  //   val handle = new AwsBatchPendingExecutionHandle(null, runId, None, None)
+  //
+  //   val failedStatus = UnsuccessfulRunStatus("test", "200", Status.ABORTED, Option("14: VM XXX shut down unexpectedly."), Seq.empty)
+  //   val executionResult = backend.handleExecutionResult(failedStatus, handle)
+  //   val result = Await.result(executionResult, timeout)
+  //   result.isInstanceOf[FailedRetryableExecutionHandle] shouldBe true
+  //   val retryableHandle = result.asInstanceOf[FailedRetryableExecutionHandle]
+  //   retryableHandle.returnCode shouldBe None
+  //   retryableHandle.throwable.getMessage should include("will be restarted with another preemptible VM")
+  // }
+  //
+  // it should "handle message 13 (TODO: fix this)" in {
+  //   val actorRef = buildTestActorRef(2)
+  //   val backend = actorRef.underlyingActor
+  //   val runId = StandardAsyncJob(UUID.randomUUID().toString)
+  //   val handle = new AwsBatchPendingExecutionHandle(null, runId, None, None)
+  //
+  //   val failedStatus = UnsuccessfulRunStatus("test", "200", Status.ABORTED, Option("13: Retryable Error."), Seq.empty)
+  //   val executionResult = backend.handleExecutionResult(failedStatus, handle)
+  //   val result = Await.result(executionResult, timeout)
+  //   result.isInstanceOf[FailedRetryableExecutionHandle] shouldBe true
+  //   val retryableHandle = result.asInstanceOf[FailedRetryableExecutionHandle]
+  //   retryableHandle.returnCode shouldBe None
+  //   retryableHandle.throwable.getMessage should include("will be restarted with another preemptible VM")
+  // }
 
   it should "handle Failure Status for various errors" in {
     val actorRef = buildTestActorRef(1)

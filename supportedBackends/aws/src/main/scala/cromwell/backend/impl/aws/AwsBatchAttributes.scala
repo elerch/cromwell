@@ -52,19 +52,26 @@ case class AwsBatchAttributes(auth: AwsAuthMode,
                          duplicationStrategy: AwsBatchCacheHitDuplicationStrategy)
 
 object AwsBatchAttributes {
-  lazy val Logger = LoggerFactory.getLogger("AwsBatchAttributes") 
+  lazy val Logger = LoggerFactory.getLogger("AwsBatchAttributes")
 
   private val availableConfigKeys = Set(
     "concurrent-job-limit",
-    "project",
     "root",
     "dockerhub",
     "dockerhub.account",
     "dockerhub.token",
-    "genomics",
     "filesystems",
-    "filesystems.aws.auth",
-    "filesystems.aws.caching.duplication-strategy",
+    "filesystems.s3.auth",
+    "filesystems.s3.caching.duplication-strategy",
+    "default-runtime-attributes",
+    "default-runtime-attributes.disks",
+    "default-runtime-attributes.memory",
+    "default-runtime-attributes.zones",
+    "default-runtime-attributes.continueOnReturnCode",
+    "default-runtime-attributes.cpu",
+    "default-runtime-attributes.noAddress",
+    "default-runtime-attributes.docker",
+    "default-runtime-attributes.failOnStderr"
   )
 
   private val deprecatedAwsBatchKeys: Map[String, String] = Map(
@@ -86,8 +93,8 @@ object AwsBatchAttributes {
     warnDeprecated(configKeys, deprecatedAwsBatchKeys, context, Logger)
 
     val executionBucket: ErrorOr[String] = validate { backendConfig.as[String]("root") }
-    val filesystemAuthName: ErrorOr[String] = validate { backendConfig.as[String]("filesystems.aws.auth") }
-    val duplicationStrategy = validate { backendConfig.as[Option[String]]("filesystems.aws.caching.duplication-strategy").getOrElse("copy") match {
+    val filesystemAuthName: ErrorOr[String] = validate { backendConfig.as[String]("filesystems.s3.auth") }
+    val duplicationStrategy = validate { backendConfig.as[Option[String]]("filesystems.s3.caching.duplication-strategy").getOrElse("copy") match {
       case "copy" => CopyCachedOutputs
       case "reference" => UseOriginalCachedOutputs
       case other => throw new IllegalArgumentException(s"Unrecognized caching duplication strategy: $other. Supported strategies are copy and reference. See reference.conf for more details.")

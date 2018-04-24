@@ -31,7 +31,7 @@
 package cromwell.backend.impl.aws.callcaching
 
 import cromwell.backend.standard.callcaching.{StandardFileHashingActor, StandardFileHashingActorParams}
-import cromwell.filesystems.aws.batch.S3BatchCommandBuilder
+import cromwell.filesystems.s3.batch.S3BatchCommandBuilder
 
 class AwsBatchBackendFileHashingActor(standardParams: StandardFileHashingActorParams) extends StandardFileHashingActor(standardParams) {
   override val ioCommandBuilder = S3BatchCommandBuilder

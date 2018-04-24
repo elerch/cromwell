@@ -161,8 +161,8 @@ class AwsBatchRuntimeAttributesSpec extends WordSpecLike with Matchers with Mock
     }
 
     "validate a valid disks entry" in {
-      val runtimeAttributes = Map("docker" -> WomString("ubuntu:latest"), "disks" -> WomString("local-disk 20 SSD"))
-      val expectedRuntimeAttributes = expectedDefaults.copy(disks = Seq(AwsBatchVolume.parse("local-disk 20 SSD").get))
+      val runtimeAttributes = Map("docker" -> WomString("ubuntu:latest"), "disks" -> WomString("local-disk"))
+      val expectedRuntimeAttributes = expectedDefaults.copy(disks = Seq(AwsBatchVolume.parse("local-disk").get))
       assertAwsBatchRuntimeAttributesSuccessfulCreation(runtimeAttributes, expectedRuntimeAttributes)
     }
 
@@ -172,8 +172,8 @@ class AwsBatchRuntimeAttributesSpec extends WordSpecLike with Matchers with Mock
     }
 
     "validate a valid disks array entry" in {
-      val runtimeAttributes = Map("docker" -> WomString("ubuntu:latest"), "disks" -> WomArray(WomArrayType(WomStringType), Array(WomString("local-disk 20 SSD"), WomString("local-disk 30 SSD"))))
-      val expectedRuntimeAttributes = expectedDefaults.copy(disks = Seq(AwsBatchVolume.parse("local-disk 20 SSD").get, AwsBatchVolume.parse("local-disk 30 SSD").get))
+      val runtimeAttributes = Map("docker" -> WomString("ubuntu:latest"), "disks" -> WomArray(WomArrayType(WomStringType), Array(WomString("local-disk"), WomString("local-disk"))))
+      val expectedRuntimeAttributes = expectedDefaults.copy(disks = Seq(AwsBatchVolume.parse("local-disk").get, AwsBatchVolume.parse("local-disk").get))
       assertAwsBatchRuntimeAttributesSuccessfulCreation(runtimeAttributes, expectedRuntimeAttributes)
     }
 
