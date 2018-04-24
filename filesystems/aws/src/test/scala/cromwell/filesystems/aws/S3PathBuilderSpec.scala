@@ -31,7 +31,6 @@
 package cromwell.filesystems.aws
 
 import software.amazon.awssdk.core.auth.AnonymousCredentialsProvider
-import cromwell.cloudsupport.aws.auth.AwsAuthModeSpec
 import cromwell.cloudsupport.aws.s3.S3Storage
 import cromwell.core.path._
 import cromwell.core.{TestKitSuite, WorkflowOptions}

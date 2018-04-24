@@ -29,47 +29,35 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-package cromwell.cloudsupport.aws.auth
+package cromwell.backend.impl.aws
 
-import java.io.StringWriter
+import software.amazon.awssdk.core.auth.AnonymousCredentialsProvider
+import cromwell.backend.BackendSpec
+// import cromwell.cloudsupport.aws.auth.AwsBatchAuthModeSpec
+import cromwell.core.TestKitSuite
+import cromwell.util.SampleWdl
+import org.scalatest.{FlatSpecLike, Matchers}
+import org.specs2.mock.Mockito
+import spray.json.{JsObject, JsString}
 
-import org.scalatest.prop.TableDrivenPropertyChecks
-import org.scalatest.{FlatSpec, Matchers}
+class AwsBatchWorkflowPathsSpec extends TestKitSuite with FlatSpecLike with Matchers with Mockito {
+  import BackendSpec._
+  import AwsBatchTestConfig._
 
-class AwsAuthModeSpec extends FlatSpec with Matchers with TableDrivenPropertyChecks {
+  behavior of "AwsBatchWorkflowPaths"
 
-  behavior of "AwsAuthMode"
+  it should "map the correct paths" in {
+    // AwsBatchAuthModeSpec.assumeHasApplicationDefaultCredentials()
 
-  // TODO: Nearly everything in AwsAuthMode is going to end up validating
-  //       credentials against the live service. Not much left to test
-}
-
-object AwsAuthModeSpec {
-  // TODO: determine if and when this might be called
-  lazy val credentialsContents: String = {
-    toJson(
-      "type" -> "keys",
-      "access_key" -> "access_key_id",
-      "secret_key" -> "secret_key"
+    val workflowDescriptor = buildWdlWorkflowDescriptor(
+      SampleWdl.HelloWorld.workflowSource(),
+      inputFileAsJson = Option(JsObject(SampleWdl.HelloWorld.rawInputs.mapValues(JsString.apply)).compactPrint)
     )
-  }
+    val configuration = new AwsBatchConfiguration(AwsBatchBackendConfigurationDescriptor)
 
-  private def toJson(contents: (String, String)*): String = {
-    // Generator doesn't matter as long as it generates JSON.
-    // Using `jsonFactory` to get an extra line hit of coverage.
-    val factory = AwsAuthMode.jsonFactory
-    val writer = new StringWriter()
-    val generator = factory.createJsonGenerator(writer)
-    generator.enablePrettyPrint()
-    generator.writeStartObject()
-    contents foreach {
-      case (key, value) =>
-        generator.writeFieldName(key)
-        generator.writeString(value)
-    }
-    generator.writeEndObject()
-    generator.close()
-    writer.toString
+    val workflowPaths = AwsBatchWorkflowPaths(workflowDescriptor, AnonymousCredentialsProvider.create.getCredentials, configuration)(system)
+    workflowPaths.executionRoot.pathAsString should be("s3://my-cromwell-workflows-bucket/")
+    workflowPaths.workflowRoot.pathAsString should
+      be(s"s3://my-cromwell-workflows-bucket/wf_hello/${workflowDescriptor.id}/")
   }
-
 }

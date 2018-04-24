@@ -29,47 +29,47 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-package cromwell.cloudsupport.aws.auth
+package cromwell.backend.impl.aws
 
-import java.io.StringWriter
+import cromwell.backend.impl.aws.io.{AwsBatchEmptyMountedDisk, AwsBatchWorkingDisk}
+import cromwell.core.path.DefaultPathBuilder
+import org.scalatest.prop.TableDrivenPropertyChecks._
+import org.scalatest.prop.Tables.Table
+import org.scalatest.{FlatSpec, Matchers, TryValues}
 
-import org.scalatest.prop.TableDrivenPropertyChecks
-import org.scalatest.{FlatSpec, Matchers}
+// import scala.util.Failure
 
-class AwsAuthModeSpec extends FlatSpec with Matchers with TableDrivenPropertyChecks {
+class AwsBatchAttachedDiskSpec extends FlatSpec with Matchers with TryValues {
+  val validTable = Table(
+    ("unparsed", "parsed"),
+    ("/mnt", AwsBatchEmptyMountedDisk(DefaultPathBuilder.get("/mnt"))),
+    ("/mnt/my_path", AwsBatchEmptyMountedDisk(DefaultPathBuilder.get("/mnt/my_path"))),
+    ("local-disk", AwsBatchWorkingDisk()),
+  )
 
-  behavior of "AwsAuthMode"
+  // TODO: Work through this syntax
+  // it should "parse" in {
+  //   forAll(validTable) { (unparsed, parsed) =>
+  //     AwsBatchAttachedDisk.parse(unparsed).get shouldEqual parsed
+  //   }
+  // }
 
-  // TODO: Nearly everything in AwsAuthMode is going to end up validating
-  //       credentials against the live service. Not much left to test
-}
-
-object AwsAuthModeSpec {
-  // TODO: determine if and when this might be called
-  lazy val credentialsContents: String = {
-    toJson(
-      "type" -> "keys",
-      "access_key" -> "access_key_id",
-      "secret_key" -> "secret_key"
-    )
-  }
-
-  private def toJson(contents: (String, String)*): String = {
-    // Generator doesn't matter as long as it generates JSON.
-    // Using `jsonFactory` to get an extra line hit of coverage.
-    val factory = AwsAuthMode.jsonFactory
-    val writer = new StringWriter()
-    val generator = factory.createJsonGenerator(writer)
-    generator.enablePrettyPrint()
-    generator.writeStartObject()
-    contents foreach {
-      case (key, value) =>
-        generator.writeFieldName(key)
-        generator.writeString(value)
+  it should "stringify" in {
+    forAll(validTable) { (unparsed, parsed) =>
+      parsed.toString shouldEqual unparsed
     }
-    generator.writeEndObject()
-    generator.close()
-    writer.toString
   }
 
+  val invalidTable = Table(
+    "unparsed",
+    "BAD",
+    "foobar"
+  )
+
+  // TODO: Work through this syntax
+  // it should "reject malformed disk mounts" in {
+  //   forAll(invalidTable) { (unparsed) =>
+  //     AwsBatchAttachedDisk.parse(unparsed) should be(a[Failure[_]])
+  //   }
+  // }
 }

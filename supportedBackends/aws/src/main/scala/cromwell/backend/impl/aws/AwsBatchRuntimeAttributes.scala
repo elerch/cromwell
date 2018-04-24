@@ -31,7 +31,6 @@
 
 package cromwell.backend.impl.aws
 
-import cats.data.Validated._
 import cats.syntax.apply._
 import cats.syntax.validated._
 import com.typesafe.config.Config
@@ -47,8 +46,6 @@ import wom.values._
 
 case class AwsBatchRuntimeAttributes(cpu: Int,
                                 zones: Vector[String],
-                                preemptible: Int,
-                                bootDiskSize: Int,
                                 memory: MemorySize,
                                 disks: Seq[AwsBatchVolume],
                                 dockerImage: String,
@@ -59,22 +56,15 @@ case class AwsBatchRuntimeAttributes(cpu: Int,
 object AwsBatchRuntimeAttributes {
 
   val ZonesKey = "zones"
-  private val ZonesDefaultValue = WomString("us-central1-b")
-
-  val PreemptibleKey = "preemptible"
-  private val preemptibleValidationInstance = new IntRuntimeAttributesValidation(PreemptibleKey)
-  private val PreemptibleDefaultValue = WomInteger(0)
-
-  val BootDiskSizeKey = "bootDiskSizeGb"
-  private val bootDiskValidationInstance = new IntRuntimeAttributesValidation(BootDiskSizeKey)
-  private val BootDiskDefaultValue = WomInteger(10)
+  private val ZonesDefaultValue = WomString("us-east-1a")
 
   val NoAddressKey = "noAddress"
   private val noAddressValidationInstance = new BooleanRuntimeAttributesValidation(NoAddressKey)
   private val NoAddressDefaultValue = WomBoolean(false)
 
+  // TODO: Determine good volume format
   val DisksKey = "disks"
-  private val DisksDefaultValue = WomString(s"${AwsBatchWorkingDisk.Name} 10 SSD")
+  private val DisksDefaultValue = WomString(s"${AwsBatchWorkingDisk.Name}")
 
   private val MemoryDefaultValue = "2 GB"
 
@@ -94,9 +84,6 @@ object AwsBatchRuntimeAttributes {
   private def zonesValidation(runtimeConfig: Option[Config]): RuntimeAttributesValidation[Vector[String]] = ZonesValidation
     .withDefault(ZonesValidation.configDefaultWomValue(runtimeConfig) getOrElse ZonesDefaultValue)
 
-  private def preemptibleValidation(runtimeConfig: Option[Config]): RuntimeAttributesValidation[Int] = preemptibleValidationInstance
-    .withDefault(preemptibleValidationInstance.configDefaultWomValue(runtimeConfig) getOrElse PreemptibleDefaultValue)
-
   private def memoryValidation(runtimeConfig: Option[Config]): RuntimeAttributesValidation[MemorySize] = {
     MemoryValidation.withDefaultMemory(
       RuntimeAttributesKeys.MemoryKey,
@@ -108,9 +95,6 @@ object AwsBatchRuntimeAttributes {
       RuntimeAttributesKeys.MemoryMinKey,
       MemoryValidation.configDefaultString(RuntimeAttributesKeys.MemoryMinKey, runtimeConfig) getOrElse MemoryDefaultValue)
   }
-
-  private def bootDiskSizeValidation(runtimeConfig: Option[Config]): RuntimeAttributesValidation[Int] = bootDiskValidationInstance
-    .withDefault(bootDiskValidationInstance.configDefaultWomValue(runtimeConfig) getOrElse BootDiskDefaultValue)
 
   private def noAddressValidation(runtimeConfig: Option[Config]): RuntimeAttributesValidation[Boolean] = noAddressValidationInstance
     .withDefault(noAddressValidationInstance.configDefaultWomValue(runtimeConfig) getOrElse NoAddressDefaultValue)
@@ -124,10 +108,8 @@ object AwsBatchRuntimeAttributes {
       cpuMinValidation(runtimeConfig),
       disksValidation(runtimeConfig),
       zonesValidation(runtimeConfig),
-      preemptibleValidation(runtimeConfig),
       memoryValidation(runtimeConfig),
       memoryMinValidation(runtimeConfig),
-      bootDiskSizeValidation(runtimeConfig),
       noAddressValidation(runtimeConfig),
       dockerValidation
     )
@@ -136,8 +118,6 @@ object AwsBatchRuntimeAttributes {
   def apply(validatedRuntimeAttributes: ValidatedRuntimeAttributes, runtimeAttrsConfig: Option[Config]): AwsBatchRuntimeAttributes = {
     val cpu: Int = RuntimeAttributesValidation.extract(cpuValidation(runtimeAttrsConfig), validatedRuntimeAttributes)
     val zones: Vector[String] = RuntimeAttributesValidation.extract(ZonesValidation, validatedRuntimeAttributes)
-    val preemptible: Int = RuntimeAttributesValidation.extract(preemptibleValidation(runtimeAttrsConfig), validatedRuntimeAttributes)
-    val bootDiskSize: Int = RuntimeAttributesValidation.extract(bootDiskSizeValidation(runtimeAttrsConfig), validatedRuntimeAttributes)
     val memory: MemorySize = RuntimeAttributesValidation.extract(memoryValidation(runtimeAttrsConfig), validatedRuntimeAttributes)
     val disks: Seq[AwsBatchVolume] = RuntimeAttributesValidation.extract(disksValidation(runtimeAttrsConfig), validatedRuntimeAttributes)
     val docker: String = RuntimeAttributesValidation.extract(dockerValidation, validatedRuntimeAttributes)
@@ -148,8 +128,6 @@ object AwsBatchRuntimeAttributes {
     new AwsBatchRuntimeAttributes(
       cpu,
       zones,
-      preemptible,
-      bootDiskSize,
       memory,
       disks,
       docker,

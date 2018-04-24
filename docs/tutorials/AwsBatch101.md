@@ -104,7 +104,7 @@ backend {
   default = "AWSBATCH"
   providers {
     AWSBATCH {
-      actor-factory = "cromwell.backend.impl.aws.BatchBackendLifecycleActorFactory"
+      actor-factory = "cromwell.backend.impl.aws.AwsBatchBackendLifecycleActorFactory"
       config {
         compute-service-account = "default"
 
@@ -121,13 +121,11 @@ backend {
           // token = ""
         }
 
-        genomics {
-          // A reference to an auth defined in the `aws` stanza at the top.  This auth is used to create
-          // Pipelines and manipulate auth JSONs.
-          auth = "application-default"
-          // Endpoint for APIs, no reason to change this under normal circumstances.
-          endpoint-url = ""
-        }
+        // A reference to an auth defined in the `aws` stanza at the top.  This auth is used to create
+        // Pipelines and manipulate auth JSONs.
+        auth = "application-default"
+        // Endpoint for APIs, no reason to change this under normal circumstances.
+        endpoint-url = ""
 
         filesystems {
           s3 {

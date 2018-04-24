@@ -31,9 +31,6 @@
 
 package cromwell.cloudsupport.aws
 
-import java.net.URL
-
-import better.files.File
 import cats.implicits._
 import com.typesafe.config.{ConfigException, ConfigFactory}
 import cromwell.cloudsupport.aws.AwsConfiguration.AwsConfigurationException
