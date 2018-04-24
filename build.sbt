@@ -246,6 +246,7 @@ lazy val server = project
   .dependsOn(googlePipelinesV2Alpha1)
   .dependsOn(jesBackend)
   .dependsOn(bcsBackend)
+  .dependsOn(awsBackend)
   .dependsOn(tesBackend)
   .dependsOn(sparkBackend)
   .dependsOn(cromwellApiClient)
