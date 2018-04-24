@@ -66,7 +66,7 @@ lazy val cloudSupport = project
   .withLibrarySettings("cromwell-cloud-support", cloudSupportDependencies)
   .dependsOn(common)
 
-lazy val awsS3FileSystem = (project in file("filesystems/aws"))
+lazy val awsS3FileSystem = (project in file("filesystems/s3"))
   .withLibrarySettings("cromwell-aws-s3filesystem")
   .dependsOn(core)
   .dependsOn(cloudSupport)

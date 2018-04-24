@@ -28,35 +28,34 @@
  *  IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  */
-package cromwell.filesystems.aws.batch
+package cromwell.filesystems.s3
 
-import cromwell.core.io.{PartialIoCommandBuilder,IoCommandBuilder}
-import cromwell.filesystems.aws.S3Path
+import akka.actor.ActorSystem
+import software.amazon.awssdk.core.auth.AwsCredentials
+import cromwell.cloudsupport.aws.auth.AwsAuthMode
+import cromwell.cloudsupport.aws.s3.S3Storage
+import cromwell.core.WorkflowOptions
+import cromwell.core.path.PathBuilderFactory
 
-private case object PartialS3BatchCommandBuilder extends PartialIoCommandBuilder {
-  override def sizeCommand = {
-    case path: S3Path => S3BatchSizeCommand(path)
+import scala.concurrent.{ExecutionContext,Future}
+
+final case class S3PathBuilderFactory private(authMode: AwsAuthMode)
+  extends PathBuilderFactory {
+
+  def withOptions(options: WorkflowOptions)(implicit as: ActorSystem, ec: ExecutionContext): Future[S3PathBuilder] = {
+    S3PathBuilder.fromAuthMode(authMode, S3Storage.DefaultConfiguration,  options)
   }
 
-  override def deleteCommand = {
-    case (path: S3Path, swallowIoExceptions) => S3BatchDeleteCommand(path, swallowIoExceptions)
-  }
-
-  override def copyCommand = {
-    case (src: S3Path, dest: S3Path, overwrite) => S3BatchCopyCommand(src, dest, overwrite)
-  }
-
-  override def hashCommand = {
-    case path: S3Path => S3BatchEtagCommand(path)
-  }
-
-  override def touchCommand = {
-    case path: S3Path => S3BatchTouchCommand(path)
-  }
-
-  override def existsCommand = {
-    case path: S3Path => S3BatchExistsCommand(path)
+  // Ignores the authMode and creates an S3PathBuilder using the passed credentials directly.
+  // Can be used when the Credentials are already available.
+  def fromCredentials(options: WorkflowOptions, credentials: AwsCredentials): S3PathBuilder = {
+    S3PathBuilder.fromCredentials(credentials, S3Storage.DefaultConfiguration, options)
   }
 }
 
-case object S3BatchCommandBuilder extends IoCommandBuilder(List(PartialS3BatchCommandBuilder))
+object S3PathBuilderFactory {
+  def apply(authMode: AwsAuthMode): S3PathBuilderFactory = {
+
+    new S3PathBuilderFactory(authMode)
+  }
+}

@@ -28,7 +28,7 @@
  *  IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  */
-package cromwell.filesystems.aws
+package cromwell.filesystems.s3
 
 import java.net.URI
 import java.nio.file.Paths
@@ -153,7 +153,7 @@ class S3PathBuilder(client: S3Client,
   override def name: String = "S3"
 }
 
-case class S3Path private[aws](nioPath: NioPath,
+case class S3Path private[s3](nioPath: NioPath,
                                bucket: String,
                                client: S3Client,
                                ) extends Path {

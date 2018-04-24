@@ -28,7 +28,7 @@
  *  IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  */
-package cromwell.filesystems.aws.batch
+package cromwell.filesystems.s3.batch
 
 import software.amazon.awssdk.core.exception.SdkException
 
@@ -47,7 +47,8 @@ import cromwell.core.io.{IoCommand,
                          IoTouchCommand,
                          IoExistsCommand,
                          IoCopyCommand}
-import cromwell.filesystems.aws.{S3Path}
+
+import cromwell.filesystems.s3.S3Path
 
 /**
   * Io commands with S3 paths and some logic enabling batching of request.

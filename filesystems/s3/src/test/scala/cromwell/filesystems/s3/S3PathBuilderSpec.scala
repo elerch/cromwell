@@ -28,7 +28,7 @@
  *  IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  */
-package cromwell.filesystems.aws
+package cromwell.filesystems.s3
 
 import software.amazon.awssdk.core.auth.AnonymousCredentialsProvider
 import cromwell.cloudsupport.aws.s3.S3Storage

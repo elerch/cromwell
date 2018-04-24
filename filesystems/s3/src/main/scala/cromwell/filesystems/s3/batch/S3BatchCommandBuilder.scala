@@ -28,34 +28,35 @@
  *  IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  */
-package cromwell.filesystems.aws
+package cromwell.filesystems.s3.batch
 
-import akka.actor.ActorSystem
-import software.amazon.awssdk.core.auth.AwsCredentials
-import cromwell.cloudsupport.aws.auth.AwsAuthMode
-import cromwell.cloudsupport.aws.s3.S3Storage
-import cromwell.core.WorkflowOptions
-import cromwell.core.path.PathBuilderFactory
+import cromwell.core.io.{PartialIoCommandBuilder,IoCommandBuilder}
+import cromwell.filesystems.s3.S3Path
 
-import scala.concurrent.{ExecutionContext,Future}
-
-final case class S3PathBuilderFactory private(authMode: AwsAuthMode)
-  extends PathBuilderFactory {
-
-  def withOptions(options: WorkflowOptions)(implicit as: ActorSystem, ec: ExecutionContext): Future[S3PathBuilder] = {
-    S3PathBuilder.fromAuthMode(authMode, S3Storage.DefaultConfiguration,  options)
+private case object PartialS3BatchCommandBuilder extends PartialIoCommandBuilder {
+  override def sizeCommand = {
+    case path: S3Path => S3BatchSizeCommand(path)
   }
 
-  // Ignores the authMode and creates an S3PathBuilder using the passed credentials directly.
-  // Can be used when the Credentials are already available.
-  def fromCredentials(options: WorkflowOptions, credentials: AwsCredentials): S3PathBuilder = {
-    S3PathBuilder.fromCredentials(credentials, S3Storage.DefaultConfiguration, options)
+  override def deleteCommand = {
+    case (path: S3Path, swallowIoExceptions) => S3BatchDeleteCommand(path, swallowIoExceptions)
+  }
+
+  override def copyCommand = {
+    case (src: S3Path, dest: S3Path, overwrite) => S3BatchCopyCommand(src, dest, overwrite)
+  }
+
+  override def hashCommand = {
+    case path: S3Path => S3BatchEtagCommand(path)
+  }
+
+  override def touchCommand = {
+    case path: S3Path => S3BatchTouchCommand(path)
+  }
+
+  override def existsCommand = {
+    case path: S3Path => S3BatchExistsCommand(path)
   }
 }
 
-object S3PathBuilderFactory {
-  def apply(authMode: AwsAuthMode): S3PathBuilderFactory = {
-
-    new S3PathBuilderFactory(authMode)
-  }
-}
+case object S3BatchCommandBuilder extends IoCommandBuilder(List(PartialS3BatchCommandBuilder))
