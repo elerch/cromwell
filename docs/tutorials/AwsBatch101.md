@@ -106,8 +106,6 @@ backend {
     AWSBATCH {
       actor-factory = "cromwell.backend.impl.aws.AwsBatchBackendLifecycleActorFactory"
       config {
-        compute-service-account = "default"
-
         // Base bucket for workflow executions
         root = "s3://<s3-bucket-name>/cromwell-execution"
 
@@ -123,7 +121,7 @@ backend {
 
         // A reference to an auth defined in the `aws` stanza at the top.  This auth is used to create
         // Pipelines and manipulate auth JSONs.
-        auth = "application-default"
+        auth = "default"
         // Endpoint for APIs, no reason to change this under normal circumstances.
         endpoint-url = ""
 
@@ -178,20 +176,20 @@ Auth configuration. This requires a "name" and a "scheme".  Authentication schem
 
 More config:
 
-concurrent-job-limit
-root
-dockerhub
-dockerhub.account
-dockerhub.token
-filesystems
-filesystems.s3.auth
-filesystems.s3.caching.duplication-strategy
-default-runtime-attributes
-default-runtime-attributes.disks
-default-runtime-attributes.memory
-default-runtime-attributes.zones
-default-runtime-attributes.continueOnReturnCode
-default-runtime-attributes.cpu
-default-runtime-attributes.noAddress
-default-runtime-attributes.docker
-default-runtime-attributes.failOnStderr
+* concurrent-job-limit
+* root
+* dockerhub
+* dockerhub.account
+* dockerhub.token
+* filesystems
+* filesystems.s3.auth
+* filesystems.s3.caching.duplication-strategy
+* default-runtime-attributes
+* default-runtime-attributes.disks
+* default-runtime-attributes.memory
+* default-runtime-attributes.zones
+* default-runtime-attributes.continueOnReturnCode
+* default-runtime-attributes.cpu
+* default-runtime-attributes.noAddress
+* default-runtime-attributes.docker
+* default-runtime-attributes.failOnStderr
