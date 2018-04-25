@@ -31,16 +31,28 @@
 package cromwell.filesystems.s3
 
 import akka.actor.ActorSystem
-import software.amazon.awssdk.core.auth.AwsCredentials
+import com.typesafe.config.Config
+import common.validation.ErrorOr.ErrorOr
+import common.validation.Validation._ // enables "unsafe"
+import cromwell.cloudsupport.aws.AwsConfiguration
 import cromwell.cloudsupport.aws.auth.AwsAuthMode
 import cromwell.cloudsupport.aws.s3.S3Storage
-import cromwell.core.WorkflowOptions
 import cromwell.core.path.PathBuilderFactory
-
+import cromwell.core.WorkflowOptions
+import net.ceedubs.ficus.Ficus._ // enables "as"
 import scala.concurrent.{ExecutionContext,Future}
+import software.amazon.awssdk.core.auth.AwsCredentials
 
-final case class S3PathBuilderFactory private(authMode: AwsAuthMode)
+// The constructor of this class is required to be Config, Config by cromwell
+// So, we need to take this config and get the AuthMode out of it
+final case class S3PathBuilderFactory private(globalConfig: Config, instanceConfig: Config)
   extends PathBuilderFactory {
+
+  // Grab the authMode out of configuration
+  val conf: AwsConfiguration = AwsConfiguration(globalConfig)
+  val authModeAsString: String = instanceConfig.as[String]("auth")
+  val authModeValidation: ErrorOr[AwsAuthMode] = conf.auth(authModeAsString)
+  val authMode = authModeValidation.unsafe(s"Failed to get authentication mode for $authModeAsString")
 
   def withOptions(options: WorkflowOptions)(implicit as: ActorSystem, ec: ExecutionContext): Future[S3PathBuilder] = {
     S3PathBuilder.fromAuthMode(authMode, S3Storage.DefaultConfiguration,  options)
@@ -54,8 +66,7 @@ final case class S3PathBuilderFactory private(authMode: AwsAuthMode)
 }
 
 object S3PathBuilderFactory {
-  def apply(authMode: AwsAuthMode): S3PathBuilderFactory = {
-
-    new S3PathBuilderFactory(authMode)
+  def apply(globalConfig: Config, instanceConfig: Config): S3PathBuilderFactory = {
+    new S3PathBuilderFactory(globalConfig, instanceConfig)
   }
 }
