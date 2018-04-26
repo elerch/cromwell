@@ -33,8 +33,6 @@ package cromwell.backend.impl.aws
 
 import java.net.SocketTimeoutException
 
-import _root_.io.grpc.Status
-import akka.actor.ActorRef
 import common.util.StringUtil._
 import common.validation.Validation._
 import cromwell.backend._
@@ -71,21 +69,7 @@ object AwsBatchAsyncBackendJobExecutionActor {
     val MonitoringScript = "monitoring_script"
   }
 
-  type AwsBatchPendingExecutionHandle = PendingExecutionHandle[StandardAsyncJob, Run, RunStatus]
-
-  def StandardException(errorCode: Status,
-                        message: String,
-                        jobTag: String,
-                        returnCodeOption: Option[Int],
-                        stderrPath: Path) = {
-    val returnCodeMessage = returnCodeOption match {
-      case Some(returnCode) if returnCode == 0 => "Job exited without an error, exit code 0."
-      case Some(returnCode) => s"Job exit code $returnCode. Check $stderrPath for more information."
-      case None => "The job was stopped before the command finished."
-    }
-
-    new Exception(s"Task $jobTag failed. $returnCodeMessage AWS Batch error code ${errorCode.getCode.value}. $message")
-  }
+  type AwsBatchPendingExecutionHandle = PendingExecutionHandle[StandardAsyncJob, AwsBatchJob, RunStatus]
 }
 
 class AwsBatchAsyncBackendJobExecutionActor(override val standardParams: StandardAsyncExecutionActorParams)
@@ -99,11 +83,7 @@ class AwsBatchAsyncBackendJobExecutionActor(override val standardParams: Standar
   val slf4jLogger = LoggerFactory.getLogger(AwsBatchAsyncBackendJobExecutionActor.getClass)
   val logger = new JobLogger("AwsBatchRun", jobDescriptor.workflowDescriptor.id, jobDescriptor.key.tag, None, Set(slf4jLogger))
 
-  val backendSingletonActor: ActorRef =
-    standardParams.backendSingletonActorOption.getOrElse(
-      throw new RuntimeException("Batch backend actor cannot exist without the backend singleton actor"))
-
-  override type StandardAsyncRunInfo = Run
+  override type StandardAsyncRunInfo = AwsBatchJob
 
   override type StandardAsyncRunStatus = RunStatus
 
@@ -120,7 +100,27 @@ class AwsBatchAsyncBackendJobExecutionActor(override val standardParams: Standar
   override lazy val dockerImageUsed: Option[String] = Option(jobDockerImage)
 
   override def tryAbort(job: StandardAsyncJob): Unit = {
-    Run(job).abort()
+    //AwsBatchJob(job).abort()
+    // TODO: We will need to do something like the following:
+    // for {
+    //   client <- Try(initializationData.bcsConfiguration.bcsClient getOrElse(throw new RuntimeException("empty run job info ")))
+    //   resp <- Try(client.getJob(job.jobId))
+    //   status <- RunStatusFactory.getStatus(job.jobId, resp.getJob.getState)
+    // } yield {
+    //   status match {
+    //     case _: RunStatus.TerminalRunStatus =>
+    //       for {
+    //         _ <- Try(client.deleteJob(job.jobId))
+    //       } yield job
+    //     case _ =>
+    //       for {
+    //         _ <- Try(client.stopJob(job.jobId))
+    //         _ <- Try(client.deleteJob(job.jobId))
+    //       } yield job
+    //   }
+    // }
+    // ()
+    ()
   }
 
   override def requestsAbortAndDiesImmediately: Boolean = false
@@ -328,7 +328,19 @@ class AwsBatchAsyncBackendJobExecutionActor(override val standardParams: Standar
     }
   }
 
-  // override def executeAsync(): Future[ExecutionHandle] = createNewJob()
+  // Primary entry point for cromwell to actually run something
+  override def executeAsync(): Future[ExecutionHandle] = {
+    val job = AwsBatchJob(
+                jobDescriptor,
+                runtimeAttributes,
+                runtimeAttributes.dockerImage,
+                "hello world", // TODO: commandLine
+                // logFileName,
+                Seq.empty[AwsBatchParameter]) // parameters)
+    for {
+      submitJobResponse <- Future.fromTry(job.submitJob())
+    } yield PendingExecutionHandle(jobDescriptor, StandardAsyncJob(submitJobResponse.jobId), Option(job), previousStatus = None)
+  }
 
   val futureKvJobKey = KvJobKey(jobDescriptor.key.call.fullyQualifiedName, jobDescriptor.key.index, jobDescriptor.key.attempt + 1)
 
@@ -339,15 +351,7 @@ class AwsBatchAsyncBackendJobExecutionActor(override val standardParams: Standar
   //
   // override def reconnectToAbortAsync(jobId: StandardAsyncJob): Future[ExecutionHandle] = reconnectToExistingJob(jobId, forceAbort = true)
 
-  // TODO: Does this need to be implemented
   // private def createNewJob(): Future[ExecutionHandle] = {
-  //   // runPipelineResponse map { runId =>
-  //   //   val run = Run(runId, initializationData.genomics)
-  //   //   PendingExecutionHandle(jobDescriptor, runId, Option(run), previousStatus = None)
-  //   // } recover {
-  //   //   case JobAbortedException => AbortedExecutionHandle
-  //   // }
-  //   new AbortedExecutionHandle
   // }
 
   // override def pollStatusAsync(handle: AwsBatchPendingExecutionHandle): Future[RunStatus] = super[AwsBatchStatusRequestClient].pollStatus(workflowId, handle.runInfo.get)

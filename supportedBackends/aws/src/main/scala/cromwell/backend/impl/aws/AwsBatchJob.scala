@@ -39,34 +39,37 @@ import software.amazon.awssdk.services.batch.model.
                                           SubmitJobResponse
                                         }
 import cromwell.backend.BackendJobDescriptor
-import cromwell.backend.standard.StandardAsyncJob
-import cromwell.core.labels.Labels
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
+import scala.util.Try
 
-object Run {
-  val slf4jLogger = LoggerFactory.getLogger(Run.getClass)
+object AwsBatchJob
 
-  def submitJob(jobDescriptor: BackendJobDescriptor,           // WDL
-                             runtimeAttributes: AwsBatchRuntimeAttributes,  // ???
+final case class AwsBatchJob(jobDescriptor: BackendJobDescriptor,           // WDL
+                             runtimeAttributes: AwsBatchRuntimeAttributes,  // config
                              dockerImage: String,                           // WDL
-                             callRootPath: String,                          // ???
+                             // callRootPath: String,                          // config (I think)
                              commandLine: String,                           // WDL
-                             logFileName: String,                           // ???
-                             parameters: Seq[AwsBatchParameter],           // inputs file
-                             labels: Labels,
-                             preemptible: Boolean,
-                             ): SubmitJobResponse = {
+                             // logFileName: String,                           // ???
+                             parameters: Seq[AwsBatchParameter]
+                             ) {
 
-    // jobDescriptor comes from the WDL
+  val Log = LoggerFactory.getLogger(AwsBatchJob.getClass)
+
+  def submitJob(): Try[SubmitJobResponse] = Try {
+    Log.info(s"""Submitting job to AWS Batch""")
+    Log.info(s"""dockerImage: $dockerImage""")
+    Log.info(s"""commandLine: $commandLine""")
+    // Log.info(s"""logFileName: $logFileName""")
+
     // runtimeAttributes
     // dockerImage ceomse from the WDL task definition
     // commandList
     lazy val workflow = jobDescriptor.workflowDescriptor
 
-    val pipelineInfoBuilder = StandardAwsBatchJobDefinitionBuilder
-    val pipelineInfo = pipelineInfoBuilder.build(commandLine, runtimeAttributes, dockerImage)
+    val jobDefinitionBuilder = StandardAwsBatchJobDefinitionBuilder
+    val jobDefinition = jobDefinitionBuilder.build(commandLine, runtimeAttributes, dockerImage)
 
     // TODO: Auth, endpoint
     val client = BatchClient.builder()
@@ -74,8 +77,9 @@ object Run {
                    // .endpointOverride(...)
                    .build
 
+    // http://aws-java-sdk-javadoc.s3-website-us-west-2.amazonaws.com/latest/software/amazon/awssdk/services/batch/model/RegisterJobDefinitionRequest.Builder.html
     val definitionRequest = RegisterJobDefinitionRequest.builder
-                              .containerProperties(pipelineInfo.containerProperties)
+                              .containerProperties(jobDefinition.containerProperties)
                               .jobDefinitionName(workflow.callable.name)
                               .build
 
@@ -91,18 +95,14 @@ object Run {
 
     job
   }
-}
-
-final case class Run(job: StandardAsyncJob) {
-
-  def abort(): Unit = {
+  def abort(jobId: String): Unit = {
     // TODO: Auth, endpoint
     val client = BatchClient.builder()
                    // .credentialsProvider(...)
                    // .endpointOverride(...)
                    .build
 
-    client.cancelJob(CancelJobRequest.builder.jobId(job.jobId).reason("cromwell abort called").build)
+    client.cancelJob(CancelJobRequest.builder.jobId(jobId).reason("cromwell abort called").build)
     // TODO: Cancel!
     ()
   }
