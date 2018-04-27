@@ -108,13 +108,31 @@ final case class AwsBatchJob(jobDescriptor: BackendJobDescriptor,           // W
 
     job
   }
-  def abort(jobId: String): Unit = {
-    // TODO: Auth, endpoint
-    val client = BatchClient.builder()
-                   // .credentialsProvider(...)
-                   // .endpointOverride(...)
-                   .build
 
+  /** Creates a job definition in AWS Batch
+   *
+   *  @param name Job definition name
+   *  @return Arn for newly created job definition
+   *
+   */
+  private def createDefinition(name: String): String = {
+    val jobDefinitionBuilder = StandardAwsBatchJobDefinitionBuilder
+    val jobDefinition = jobDefinitionBuilder.build(commandLine, runtimeAttributes, runtimeAttributes.dockerImage)
+
+    // See:
+    //
+    // http://aws-java-sdk-javadoc.s3-website-us-west-2.amazonaws.com/latest/software/amazon/awssdk/services/batch/model/RegisterJobDefinitionRequest.Builder.html
+    val definitionRequest = RegisterJobDefinitionRequest.builder
+                              .containerProperties(jobDefinition.containerProperties)
+                              .jobDefinitionName(name)
+                              // See https://stackoverflow.com/questions/24349517/scala-method-named-type
+                              .`type`(JobDefinitionType.CONTAINER)
+                              .build
+
+    client.registerJobDefinition(definitionRequest).jobDefinitionArn
+  }
+
+  def abort(jobId: String): Unit = {
     client.cancelJob(CancelJobRequest.builder.jobId(jobId).reason("cromwell abort called").build)
     // TODO: Cancel!
     ()

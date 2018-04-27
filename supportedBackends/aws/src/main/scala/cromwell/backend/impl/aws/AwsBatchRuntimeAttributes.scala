@@ -49,11 +49,14 @@ case class AwsBatchRuntimeAttributes(cpu: Int,
                                 memory: MemorySize,
                                 disks: Seq[AwsBatchVolume],
                                 dockerImage: String,
+                                queueArn: String,
                                 failOnStderr: Boolean,
                                 continueOnReturnCode: ContinueOnReturnCode,
                                 noAddress: Boolean)
 
 object AwsBatchRuntimeAttributes {
+
+  val QueueArnKey = "queueArn"
 
   val ZonesKey = "zones"
   private val ZonesDefaultValue = WomString("us-east-1a")
@@ -101,6 +104,9 @@ object AwsBatchRuntimeAttributes {
 
   private val dockerValidation: RuntimeAttributesValidation[String] = DockerValidation.instance
 
+  private def queueArnValidation(runtimeConfig: Option[Config]): RuntimeAttributesValidation[String] =
+    ArnValidation(AwsBatchRuntimeAttributes.QueueArnKey)
+
   def runtimeAttributesBuilder(configuration: AwsBatchConfiguration): StandardValidatedRuntimeAttributesBuilder = {
     val runtimeConfig = configuration.runtimeConfig
     StandardValidatedRuntimeAttributesBuilder.default(runtimeConfig).withValidation(
@@ -121,6 +127,7 @@ object AwsBatchRuntimeAttributes {
     val memory: MemorySize = RuntimeAttributesValidation.extract(memoryValidation(runtimeAttrsConfig), validatedRuntimeAttributes)
     val disks: Seq[AwsBatchVolume] = RuntimeAttributesValidation.extract(disksValidation(runtimeAttrsConfig), validatedRuntimeAttributes)
     val docker: String = RuntimeAttributesValidation.extract(dockerValidation, validatedRuntimeAttributes)
+    val queueArn: String = RuntimeAttributesValidation.extract(queueArnValidation(runtimeAttrsConfig), validatedRuntimeAttributes)
     val failOnStderr: Boolean = RuntimeAttributesValidation.extract(failOnStderrValidation(runtimeAttrsConfig), validatedRuntimeAttributes)
     val continueOnReturnCode: ContinueOnReturnCode = RuntimeAttributesValidation.extract(continueOnReturnCodeValidation(runtimeAttrsConfig), validatedRuntimeAttributes)
     val noAddress: Boolean = RuntimeAttributesValidation.extract(noAddressValidation(runtimeAttrsConfig), validatedRuntimeAttributes)
@@ -131,12 +138,19 @@ object AwsBatchRuntimeAttributes {
       memory,
       disks,
       docker,
+      queueArn,
       failOnStderr,
       continueOnReturnCode,
       noAddress
     )
   }
 }
+
+// TODO: provide arn regexp validation here
+object ArnValidation {
+  def apply(key: String): ArnValidation = new ArnValidation(key)
+}
+class ArnValidation(override val key: String) extends StringRuntimeAttributesValidation(key)
 
 object ZonesValidation extends RuntimeAttributesValidation[Vector[String]] {
   override def key: String = AwsBatchRuntimeAttributes.ZonesKey

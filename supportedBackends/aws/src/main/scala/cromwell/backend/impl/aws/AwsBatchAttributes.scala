@@ -71,6 +71,7 @@ object AwsBatchAttributes {
     "default-runtime-attributes.cpu",
     "default-runtime-attributes.noAddress",
     "default-runtime-attributes.docker",
+    "default-runtime-attributes.queueArn",
     "default-runtime-attributes.failOnStderr"
   )
 
