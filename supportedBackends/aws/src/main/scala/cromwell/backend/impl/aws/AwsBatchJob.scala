@@ -36,7 +36,8 @@ import software.amazon.awssdk.services.batch.model.
                                           CancelJobRequest,
                                           RegisterJobDefinitionRequest,
                                           SubmitJobRequest,
-                                          SubmitJobResponse
+                                          SubmitJobResponse,
+                                          JobDefinitionType
                                         }
 import cromwell.backend.BackendJobDescriptor
 import org.slf4j.LoggerFactory
@@ -46,12 +47,18 @@ import scala.util.Try
 
 object AwsBatchJob
 
+/** The actual job for submission in AWS batch. Currently, each job will
+ *  have its own job definition. Support for separation and reuse of job
+ *  definitions will be provided later.
+ *
+ *  @constructor Create an AwsBatchJob object capable of submitting, aborting and monitoring itself
+ *  @param jobDescriptor create a new person with a name and age.
+ *  @param runtimeAttributes runtime attributes class (which subsequently pulls from config)
+ *  @param commandLine command line to be passed to the job
+ */
 final case class AwsBatchJob(jobDescriptor: BackendJobDescriptor,           // WDL
                              runtimeAttributes: AwsBatchRuntimeAttributes,  // config
-                             dockerImage: String,                           // WDL
-                             // callRootPath: String,                          // config (I think)
                              commandLine: String,                           // WDL
-                             // logFileName: String,                           // ???
                              parameters: Seq[AwsBatchParameter]
                              ) {
 
@@ -59,7 +66,7 @@ final case class AwsBatchJob(jobDescriptor: BackendJobDescriptor,           // W
 
   def submitJob(): Try[SubmitJobResponse] = Try {
     Log.info(s"""Submitting job to AWS Batch""")
-    Log.info(s"""dockerImage: $dockerImage""")
+    Log.info(s"""dockerImage: ${runtimeAttributes.dockerImage}""")
     Log.info(s"""commandLine: $commandLine""")
     // Log.info(s"""logFileName: $logFileName""")
 
@@ -69,7 +76,7 @@ final case class AwsBatchJob(jobDescriptor: BackendJobDescriptor,           // W
     lazy val workflow = jobDescriptor.workflowDescriptor
 
     val jobDefinitionBuilder = StandardAwsBatchJobDefinitionBuilder
-    val jobDefinition = jobDefinitionBuilder.build(commandLine, runtimeAttributes, dockerImage)
+    val jobDefinition = jobDefinitionBuilder.build(commandLine, runtimeAttributes, runtimeAttributes.dockerImage)
 
     // TODO: Auth, endpoint
     val client = BatchClient.builder()
@@ -77,16 +84,22 @@ final case class AwsBatchJob(jobDescriptor: BackendJobDescriptor,           // W
                    // .endpointOverride(...)
                    .build
 
+    // Build the Job definition before we submit. Eventually this should be
+    // done separately and cached. See:
+    //
     // http://aws-java-sdk-javadoc.s3-website-us-west-2.amazonaws.com/latest/software/amazon/awssdk/services/batch/model/RegisterJobDefinitionRequest.Builder.html
     val definitionRequest = RegisterJobDefinitionRequest.builder
                               .containerProperties(jobDefinition.containerProperties)
                               .jobDefinitionName(workflow.callable.name)
+                              // See https://stackoverflow.com/questions/24349517/scala-method-named-type
+                              .`type`(JobDefinitionType.CONTAINER)
                               .build
 
     val definitionResponse = client.registerJobDefinition(definitionRequest)
     val job = client.submitJob(SubmitJobRequest.builder()
                 .jobName(workflow.callable.name)
                 .parameters(parameters.collect({ case i: AwsBatchInput => i.toStringString }).toMap.asJava)
+                // TODO: .jobQueue(...)
                 .jobDefinition(definitionResponse.jobDefinitionArn).build)
 
     // TODO: Remove the following comment: disks cannot have mount points at runtime, so set them null

@@ -330,12 +330,34 @@ class AwsBatchAsyncBackendJobExecutionActor(override val standardParams: Standar
 
   // Primary entry point for cromwell to actually run something
   override def executeAsync(): Future[ExecutionHandle] = {
+
+    // Rundown of the command string:
+    //
+    // commandScriptContents: This is ErrorOr[String] that includes a full
+    //                        bash script designed to get output into a file
+    //                        It's defined in JobPaths.scala. Other backends
+    //                        do this funky "write to a file in the storage service,
+    //                        have the container pick up that file and run it" thing.
+    //
+    //                        But, I'm not convinced yet that Cromwell needs this,
+    //                        and I think that we can pass over to AWS Batch
+    //                        what is needed to run. So...why do anything like
+    //                        the following?
+    //
+    // commandScriptContents.fold(
+    //   errors => Future.failed(new RuntimeException(errors.toList.mkString(", "))),
+    //   callPaths.script.write)
+    //
+    //
+    // So, what we're passing to AwsBatchJob here is the literal command string -
+    //
+    // instantiatedCommand.commandString: This is an InstantiatedCommand class and holds
+    //                                    all the things about the command. It's defined
+    //                                    in StandardAsyncExecutionActor
     val job = AwsBatchJob(
                 jobDescriptor,
                 runtimeAttributes,
-                runtimeAttributes.dockerImage,
-                "hello world", // TODO: commandLine
-                // logFileName,
+                instantiatedCommand.commandString,
                 Seq.empty[AwsBatchParameter]) // parameters)
     for {
       submitJobResponse <- Future.fromTry(job.submitJob())

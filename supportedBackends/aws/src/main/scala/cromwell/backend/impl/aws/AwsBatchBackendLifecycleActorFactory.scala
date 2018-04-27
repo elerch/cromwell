@@ -44,12 +44,13 @@ import cromwell.backend.standard.{StandardLifecycleActorFactory,
                                   StandardFinalizationActorParams}
 import cromwell.core.CallOutputs
 import wom.graph.CommandCallNode
+import org.slf4j.LoggerFactory
 
 case class AwsBatchBackendLifecycleActorFactory(
   name: String,
   configurationDescriptor: BackendConfigurationDescriptor)
     extends StandardLifecycleActorFactory {
-
+  lazy val Log = LoggerFactory.getLogger(AwsBatchBackendLifecycleActorFactory.getClass)
   override lazy val initializationActorClass: Class[_ <: StandardInitializationActor]
     = classOf[AwsBatchInitializationActor]
 
@@ -68,6 +69,7 @@ case class AwsBatchBackendLifecycleActorFactory(
     workflowDescriptor: BackendWorkflowDescriptor, ioActor: ActorRef,
     calls: Set[CommandCallNode], serviceRegistryActor: ActorRef,
     restart: Boolean): StandardInitializationActorParams = {
+    Log.debug("Initializing AwsBatchBackendLifecycleActorFactory")
     AwsBatchInitializationActorParams(workflowDescriptor, ioActor, calls,
       configuration, serviceRegistryActor, restart)
   }
