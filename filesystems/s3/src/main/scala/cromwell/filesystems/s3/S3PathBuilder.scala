@@ -39,7 +39,7 @@ import cromwell.cloudsupport.aws.auth.AwsAuthMode
 import cromwell.cloudsupport.aws.s3.S3Storage
 import cromwell.core.WorkflowOptions
 import cromwell.core.path.{NioPath, Path, PathBuilder}
-import cromwell.filesystems.aws.S3PathBuilder._
+import cromwell.filesystems.s3.S3PathBuilder._
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
