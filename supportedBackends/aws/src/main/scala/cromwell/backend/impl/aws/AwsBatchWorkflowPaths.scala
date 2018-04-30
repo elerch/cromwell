@@ -40,7 +40,7 @@ import cromwell.backend.{BackendJobDescriptorKey, BackendWorkflowDescriptor}
 import cromwell.cloudsupport.aws.s3.S3Storage
 import cromwell.core.WorkflowOptions
 import cromwell.core.path.{Path, PathBuilder}
-import cromwell.filesystems.aws.S3PathBuilder
+import cromwell.filesystems.s3.S3PathBuilder
 
 import scala.language.postfixOps
 

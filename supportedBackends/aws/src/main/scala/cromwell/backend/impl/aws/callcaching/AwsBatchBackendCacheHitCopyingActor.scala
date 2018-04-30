@@ -39,7 +39,7 @@ import cromwell.core.CallOutputs
 import cromwell.core.io.{IoCommand, IoTouchCommand}
 import cromwell.core.path.Path
 import cromwell.core.simpleton.{WomValueBuilder, WomValueSimpleton}
-import cromwell.filesystems.aws.batch.S3BatchCommandBuilder
+import cromwell.filesystems.s3.batch.S3BatchCommandBuilder
 import common.util.TryUtil
 import wom.values.WomFile
 

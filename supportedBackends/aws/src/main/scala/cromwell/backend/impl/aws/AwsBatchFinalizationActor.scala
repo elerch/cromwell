@@ -37,7 +37,7 @@ import cromwell.backend.standard.{StandardFinalizationActor, StandardFinalizatio
 import cromwell.core.CallOutputs
 import cromwell.core.io.AsyncIoActorClient
 import wom.graph.CommandCallNode
-import cromwell.filesystems.aws.batch.S3BatchCommandBuilder
+import cromwell.filesystems.s3.batch.S3BatchCommandBuilder
 import scala.concurrent.Future
 
 case class AwsBatchFinalizationActorParams

@@ -33,9 +33,9 @@ package cromwell.backend.impl.aws
 
 import cromwell.backend.standard.{StandardExpressionFunctions, StandardExpressionFunctionsParams}
 import cromwell.core.io.IoCommandBuilder
-import cromwell.filesystems.aws.S3PathBuilder
-import cromwell.filesystems.aws.S3PathBuilder.{InvalidS3Path, PossiblyValidRelativeS3Path, ValidFullS3Path}
-import cromwell.filesystems.aws.batch.S3BatchCommandBuilder
+import cromwell.filesystems.s3.S3PathBuilder
+import cromwell.filesystems.s3.S3PathBuilder.{InvalidS3Path, PossiblyValidRelativeS3Path, ValidFullS3Path}
+import cromwell.filesystems.s3.batch.S3BatchCommandBuilder
 
 class AwsBatchExpressionFunctions(standardParams: StandardExpressionFunctionsParams)
   extends StandardExpressionFunctions(standardParams) {

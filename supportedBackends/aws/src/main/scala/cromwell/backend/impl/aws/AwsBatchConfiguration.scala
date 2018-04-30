@@ -31,7 +31,7 @@
 
 package cromwell.backend.impl.aws
 
-import cromwell.filesystems.aws.S3PathBuilderFactory
+import cromwell.filesystems.s3.S3PathBuilderFactory
 import cromwell.backend.BackendConfigurationDescriptor
 import cromwell.core.{BackendDockerConfiguration}
 import cromwell.cloudsupport.aws.AwsConfiguration
@@ -45,5 +45,5 @@ class AwsBatchConfiguration(val configurationDescriptor: BackendConfigurationDes
   val batchAttributes = AwsBatchAttributes(awsConfig, configurationDescriptor.backendConfig)
   val awsAuth = batchAttributes.auth
   val dockerCredentials = BackendDockerConfiguration.build(configurationDescriptor.backendConfig).dockerCredentials
-  val pathBuilderFactory = S3PathBuilderFactory(awsAuth)
+  val pathBuilderFactory = S3PathBuilderFactory(configurationDescriptor.globalConfig, configurationDescriptor.backendConfig)
 }
