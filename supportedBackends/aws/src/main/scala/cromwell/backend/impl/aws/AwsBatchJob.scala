@@ -37,6 +37,7 @@ import software.amazon.awssdk.services.batch.model.
                                           RegisterJobDefinitionRequest,
                                           SubmitJobRequest,
                                           SubmitJobResponse,
+                                          DescribeJobsRequest,
                                           JobDefinitionType
                                         }
 import cromwell.backend.BackendJobDescriptor
@@ -120,6 +121,19 @@ final case class AwsBatchJob(jobDescriptor: BackendJobDescriptor,           // W
                               .build
 
     client.registerJobDefinition(definitionRequest).jobDefinitionArn
+  }
+
+  /** Gets the status of a job by it's Id, converted to a RunStatus
+   *
+   *  @param jobId Job ID as defined in AWS Batch
+   *  @return Current RunStatus
+   *
+   */
+  def status(jobId: String): Try[RunStatus] = {
+     val describeJobsResponse = client.describeJobs(DescribeJobsRequest.builder.jobs(jobId).build)
+     val jobs = describeJobsResponse.jobs.asScala.toSeq
+     val thisJob = jobs(0)
+     RunStatus.fromJobStatus(thisJob.status, jobId)
   }
 
   def abort(jobId: String): Unit = {

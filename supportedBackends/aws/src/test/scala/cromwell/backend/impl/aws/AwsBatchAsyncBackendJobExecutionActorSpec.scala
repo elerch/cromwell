@@ -33,7 +33,6 @@ package cromwell.backend.impl.aws
 
 import java.util.UUID
 
-import _root_.io.grpc.Status
 import _root_.wdl.draft2.model._
 import wdl.transforms.draft2.wdlom2wom._
 import wdl.transforms.draft2.wdlom2wom.WdlDraft2WomExecutableMakers._
@@ -379,19 +378,19 @@ class AwsBatchAsyncBackendJobExecutionActorSpec extends TestKitSuite("AwsBatchAs
     val runId = StandardAsyncJob(UUID.randomUUID().toString)
     val handle = new AwsBatchPendingExecutionHandle(null, runId, None, None)
 
-    def checkFailedResult(errorCode: Status, errorMessage: Option[String]): ExecutionHandle = {
-      val failed = UnsuccessfulRunStatus("test", "failed", errorCode, errorMessage, Seq.empty)
+    def checkFailedResult(errorMessage: Option[String]): ExecutionHandle = {
+      val failed = UnsuccessfulRunStatus("test", "failed", errorMessage, Seq.empty)
       Await.result(backend.handleExecutionResult(failed, handle), timeout)
     }
 
-    checkFailedResult(Status.ABORTED, Option("15: Other type of error."))
+    checkFailedResult(Option("15: Other type of error."))
       .isInstanceOf[FailedNonRetryableExecutionHandle] shouldBe true
-    checkFailedResult(Status.OUT_OF_RANGE, Option("14: Wrong errorCode.")).isInstanceOf[FailedNonRetryableExecutionHandle] shouldBe true
-    checkFailedResult(Status.ABORTED, Option("Weird error message.")).isInstanceOf[FailedNonRetryableExecutionHandle] shouldBe true
-    checkFailedResult(Status.ABORTED, Option("UnparsableInt: Even weirder error message."))
+    checkFailedResult(Option("14: Wrong errorCode.")).isInstanceOf[FailedNonRetryableExecutionHandle] shouldBe true
+    checkFailedResult(Option("Weird error message.")).isInstanceOf[FailedNonRetryableExecutionHandle] shouldBe true
+    checkFailedResult(Option("UnparsableInt: Even weirder error message."))
       .isInstanceOf[FailedNonRetryableExecutionHandle] shouldBe true
-    checkFailedResult(Status.ABORTED, None).isInstanceOf[FailedNonRetryableExecutionHandle] shouldBe true
-    checkFailedResult(Status.CANCELLED, Option("Operation canceled at")) shouldBe AbortedExecutionHandle
+    checkFailedResult(None).isInstanceOf[FailedNonRetryableExecutionHandle] shouldBe true
+    checkFailedResult(Option("Operation canceled at")) shouldBe AbortedExecutionHandle
 
     actorRef.stop()
   }

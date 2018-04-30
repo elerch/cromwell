@@ -377,15 +377,21 @@ class AwsBatchAsyncBackendJobExecutionActor(override val standardParams: Standar
   // }
 
   // override def pollStatusAsync(handle: AwsBatchPendingExecutionHandle): Future[RunStatus] = super[AwsBatchStatusRequestClient].pollStatus(workflowId, handle.runInfo.get)
+  //
+  // This is called by Cromwell after initial execution (see executeAsync above)
+  // It expects a Future[RunStatus]. In this case we'll simply call the
+  // AWS Batch API to do this. The AwsBatchJob object in the PendingExecutionHandle
+  // will have the actual status call, so our job here is simply to pull the
+  // object out of the handle and execute the underlying status method
   override def pollStatusAsync(handle: AwsBatchPendingExecutionHandle): Future[RunStatus] = {
      val jobId = handle.pendingJob.jobId
-       throw new RuntimeException(s"not implemented. Jobid $jobId")
-     // val job = {
-     //   // TODO: Get status from Batch
-     //   throw new RuntimeException(s"not implemented. Jobid $jobId")
-     // }
-     // Future.fromTry(job)
+     val job = handle.runInfo match {
+       case Some(job) => job
+       case None => throw new RuntimeException(s"pollStatusAsync called but job not available. This should not happen. Jobid ${jobId}")
+     }
+     Future.fromTry(job.status(jobId))
    }
+
 
 
   override lazy val startMetadataKeyValues: Map[String, Any] = super[AwsBatchJobCachingActorHelper].startMetadataKeyValues
@@ -411,7 +417,7 @@ class AwsBatchAsyncBackendJobExecutionActor(override val standardParams: Standar
 
   override def isSuccess(runStatus: RunStatus): Boolean = {
     runStatus match {
-      case _: RunStatus.Success => true
+      case _: RunStatus.Succeeded => true
       case _: RunStatus.UnsuccessfulRunStatus => false
       case _ => throw new RuntimeException(s"Cromwell programmer blunder: isSuccess was called on an incomplete RunStatus ($runStatus).")
     }
@@ -419,7 +425,7 @@ class AwsBatchAsyncBackendJobExecutionActor(override val standardParams: Standar
 
   override def getTerminalEvents(runStatus: RunStatus): Seq[ExecutionEvent] = {
     runStatus match {
-      case successStatus: RunStatus.Success => successStatus.eventList
+      case successStatus: RunStatus.Succeeded => successStatus.eventList
       case unknown =>
         throw new RuntimeException(s"handleExecutionSuccess not called with RunStatus.Success. Instead got $unknown")
     }

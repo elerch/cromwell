@@ -31,9 +31,9 @@
 
 package cromwell.backend.impl.aws
 
+import software.amazon.awssdk.services.batch.model.JobStatus
 import cromwell.core.ExecutionEvent
-import _root_.io.grpc.Status
-
+import scala.util.{Failure, Success, Try}
 sealed trait RunStatus {
   import RunStatus._
 
@@ -45,6 +45,21 @@ sealed trait RunStatus {
 }
 
 object RunStatus {
+  def fromJobStatus(status: JobStatus, jobId: String, errorMessage: Option[String] = None,
+                    eventList: Seq[ExecutionEvent] = Seq.empty): Try[RunStatus] = {
+    status match {
+      case JobStatus.FAILED => Success(Failed(jobId, errorMessage, eventList))
+      case JobStatus.PENDING => Success(Initializing)
+      case JobStatus.RUNNABLE => Success(Initializing)
+      case JobStatus.RUNNING => Success(Running)
+      case JobStatus.STARTING => Success(Running)
+      case JobStatus.SUBMITTED => Success(Initializing)
+      case JobStatus.SUCCEEDED => Success(Succeeded(eventList))
+      // JobStatus.UNKNOWN_TO_SDK_VERSION
+      case _ => Failure(new RuntimeException(s"job {$jobId} has an unknown status {$status}"))
+    }
+  }
+
   case object Initializing extends RunStatus
   case object Running extends RunStatus
 
@@ -55,24 +70,23 @@ object RunStatus {
   sealed trait UnsuccessfulRunStatus extends TerminalRunStatus {
     val errorMessage: Option[String]
     lazy val prettyPrintedError: String = errorMessage map { e => s" Message: $e" } getOrElse ""
-    val errorCode: Status
   }
 
-  case class Success(eventList: Seq[ExecutionEvent]) extends TerminalRunStatus {
-    override def toString = "Success"
+  case class Succeeded(eventList: Seq[ExecutionEvent]) extends TerminalRunStatus {
+    override def toString = "Succeeded"
   }
 
   object UnsuccessfulRunStatus {
-    def apply(jobId: String, status: String, errorCode: Status, errorMessage: Option[String], eventList: Seq[ExecutionEvent]): UnsuccessfulRunStatus = {
-      if (status == "Stopped") {
-        Stopped(jobId, errorCode, errorMessage, eventList)
+    def apply(jobId: String, status: String, errorMessage: Option[String], eventList: Seq[ExecutionEvent]): UnsuccessfulRunStatus = {
+      if (status == "Stopped") { // TODO: Verify this
+        Stopped(jobId, errorMessage, eventList)
       } else {
-        Failed(jobId, errorCode, errorMessage, eventList)
+        Failed(jobId, errorMessage, eventList)
       }
     }
   }
+
   final case class Stopped(jobId: String,
-                          errorCode: Status,
                           errorMessage: Option[String],
                           eventList: Seq[ExecutionEvent],
                           ) extends UnsuccessfulRunStatus {
@@ -80,7 +94,6 @@ object RunStatus {
   }
 
   final case class Failed(jobId: String,
-                          errorCode: Status,
                           errorMessage: Option[String],
                           eventList: Seq[ExecutionEvent],
                           ) extends UnsuccessfulRunStatus {
@@ -88,7 +101,6 @@ object RunStatus {
   }
 
   final case class Cancelled(jobId: String,
-                          errorCode: Status,
                           errorMessage: Option[String],
                           eventList: Seq[ExecutionEvent],
                           ) extends UnsuccessfulRunStatus {
