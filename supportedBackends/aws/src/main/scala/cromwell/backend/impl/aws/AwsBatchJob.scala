@@ -48,7 +48,7 @@ import scala.util.Try
 object AwsBatchJob
 
 /** The actual job for submission in AWS batch. Currently, each job will
- *  have its own job definition. Support for separation and reuse of job
+ *  have its own job definition and queue. Support for separation and reuse of job
  *  definitions will be provided later.
  *
  *  @constructor Create an AwsBatchJob object capable of submitting, aborting and monitoring itself
@@ -64,9 +64,16 @@ final case class AwsBatchJob(jobDescriptor: BackendJobDescriptor,           // W
 
   val Log = LoggerFactory.getLogger(AwsBatchJob.getClass)
 
+  // TODO: Auth, endpoint
+  lazy val client = BatchClient.builder()
+                   // .credentialsProvider(...)
+                   // .endpointOverride(...)
+                   .build
+
   def submitJob(): Try[SubmitJobResponse] = Try {
     Log.info(s"""Submitting job to AWS Batch""")
     Log.info(s"""dockerImage: ${runtimeAttributes.dockerImage}""")
+    Log.info(s"""jobQueueArn: ${runtimeAttributes.queueArn}""")
     Log.info(s"""commandLine: $commandLine""")
     // Log.info(s"""logFileName: $logFileName""")
 
@@ -75,32 +82,15 @@ final case class AwsBatchJob(jobDescriptor: BackendJobDescriptor,           // W
     // commandList
     lazy val workflow = jobDescriptor.workflowDescriptor
 
-    val jobDefinitionBuilder = StandardAwsBatchJobDefinitionBuilder
-    val jobDefinition = jobDefinitionBuilder.build(commandLine, runtimeAttributes, runtimeAttributes.dockerImage)
-
-    // TODO: Auth, endpoint
-    val client = BatchClient.builder()
-                   // .credentialsProvider(...)
-                   // .endpointOverride(...)
-                   .build
-
     // Build the Job definition before we submit. Eventually this should be
-    // done separately and cached. See:
-    //
-    // http://aws-java-sdk-javadoc.s3-website-us-west-2.amazonaws.com/latest/software/amazon/awssdk/services/batch/model/RegisterJobDefinitionRequest.Builder.html
-    val definitionRequest = RegisterJobDefinitionRequest.builder
-                              .containerProperties(jobDefinition.containerProperties)
-                              .jobDefinitionName(workflow.callable.name)
-                              // See https://stackoverflow.com/questions/24349517/scala-method-named-type
-                              .`type`(JobDefinitionType.CONTAINER)
-                              .build
+    // done separately and cached.
+    val definitionArn = createDefinition(workflow.callable.name)
 
-    val definitionResponse = client.registerJobDefinition(definitionRequest)
     val job = client.submitJob(SubmitJobRequest.builder()
                 .jobName(workflow.callable.name)
                 .parameters(parameters.collect({ case i: AwsBatchInput => i.toStringString }).toMap.asJava)
-                // TODO: .jobQueue(...)
-                .jobDefinition(definitionResponse.jobDefinitionArn).build)
+                .jobQueue(runtimeAttributes.queueArn)
+                .jobDefinition(definitionArn).build)
 
     // TODO: Remove the following comment: disks cannot have mount points at runtime, so set them null
     // TODO: Others have an "ephemeral pipeline". AWS Batch does not have the same concept,
