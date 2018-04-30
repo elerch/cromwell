@@ -59,7 +59,7 @@ import cromwell.core.callcaching.NoDocker
 import cromwell.core.labels.Labels
 import cromwell.core.logging.JobLogger
 import cromwell.core.path.{DefaultPathBuilder, PathBuilder}
-import cromwell.filesystems.aws.{S3Path, S3PathBuilder}
+import cromwell.filesystems.s3.{S3Path, S3PathBuilder}
 import cromwell.services.keyvalue.InMemoryKvServiceActor
 import cromwell.services.keyvalue.KeyValueServiceActor.KvResponse
 import cromwell.util.JsonFormatting.WomValueJsonFormatter._
