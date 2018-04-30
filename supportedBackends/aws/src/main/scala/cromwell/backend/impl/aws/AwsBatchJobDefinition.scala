@@ -59,8 +59,21 @@ sealed trait AwsBatchJobDefinition {
 }
 
 trait AwsBatchJobDefinitionBuilder {
+  /** Gets a builder, seeded with appropriate portions of the container properties
+   *
+   *  @param commandLine command line to execute within the container. Will be run in a shell context
+   *  @param dockerImage docker image with which to run
+   *  @return ContainerProperties builder ready for modification
+   *
+   */
   def builder(commandLine: String, dockerImage: String): ContainerProperties.Builder =
-    ContainerProperties.builder().command(commandLine).image(dockerImage)
+    ContainerProperties.builder().command("/bin/sh", "-c", commandLine).image(dockerImage)
+
+  // NOTE: The builder command above uses /bin/sh. This is inconsistent with
+  //       other backends, but I think this is a better default. Bash is unavailable
+  //       by default in alpine linux, for instance. It's also smaller and faster.
+  //       Bash features can be provided by using your own "/bin/bash -c" in the task
+  //       definition. The only downside is its inconsistency with other backends
 
   def buildResources(builder: ContainerProperties.Builder, runtimeAttributes: AwsBatchRuntimeAttributes): ContainerProperties.Builder = {
     builder
