@@ -80,8 +80,8 @@ class AwsBatchAsyncBackendJobExecutionActor(override val standardParams: Standar
 
   import AwsBatchAsyncBackendJobExecutionActor._
 
-  val slf4jLogger = LoggerFactory.getLogger(AwsBatchAsyncBackendJobExecutionActor.getClass)
-  val logger = new JobLogger("AwsBatchRun", jobDescriptor.workflowDescriptor.id, jobDescriptor.key.tag, None, Set(slf4jLogger))
+  val Log = LoggerFactory.getLogger(AwsBatchAsyncBackendJobExecutionActor.getClass)
+  val logger = new JobLogger("AwsBatchRun", jobDescriptor.workflowDescriptor.id, jobDescriptor.key.tag, None, Set(Log))
 
   override type StandardAsyncRunInfo = AwsBatchJob
 
@@ -99,27 +99,53 @@ class AwsBatchAsyncBackendJobExecutionActor(override val standardParams: Standar
 
   override lazy val dockerImageUsed: Option[String] = Option(jobDockerImage)
 
+  /* Batch job object (see AwsBatchJob). This has the configuration necessary
+   * to perform all operations with the AWS Batch infrastructure. This is
+   * where the real work happens
+   *
+   * Rundown of the command string:
+   *
+   * commandScriptContents: This is ErrorOr[String] that includes a full
+   *                        bash script designed to get output into a file
+   *                        It's defined in JobPaths.scala. Other backends
+   *                        do this funky "write to a file in the storage service,
+   *                        have the container pick up that file and run it" thing.
+   *
+   *                        But, I'm not convinced yet that Cromwell needs this,
+   *                        and I think that we can pass over to AWS Batch
+   *                        what is needed to run. So...why do anything like
+   *                        the following?
+   *
+   * commandScriptContents.fold(
+   *   errors => Future.failed(new RuntimeException(errors.toList.mkString(", "))),
+   *   callPaths.script.write)
+   *
+   *
+   * So, what we're passing to AwsBatchJob here is the literal command string -
+   *
+   * instantiatedCommand.commandString: This is an InstantiatedCommand class and holds
+   *                                    all the things about the command. It's defined
+   *                                    in StandardAsyncExecutionActor
+   *
+   * NOTE: In order to get output from the command, the commandScriptContents
+   * needs to push stuff out to S3. This is why we will eventually need
+   * commandScriptContents here
+   */
+  lazy val batchJob = AwsBatchJob(jobDescriptor, runtimeAttributes,
+                                  instantiatedCommand.commandString,
+                                  Seq.empty[AwsBatchParameter])
+
+  /* Tries to abort the job in flight
+   *
+   * @param job A StandardAsyncJob object (has jobId value) to cancel
+   * @return Nothing
+   *
+   */
   override def tryAbort(job: StandardAsyncJob): Unit = {
-    //AwsBatchJob(job).abort()
-    // TODO: We will need to do something like the following:
-    // for {
-    //   client <- Try(initializationData.bcsConfiguration.bcsClient getOrElse(throw new RuntimeException("empty run job info ")))
-    //   resp <- Try(client.getJob(job.jobId))
-    //   status <- RunStatusFactory.getStatus(job.jobId, resp.getJob.getState)
-    // } yield {
-    //   status match {
-    //     case _: RunStatus.TerminalRunStatus =>
-    //       for {
-    //         _ <- Try(client.deleteJob(job.jobId))
-    //       } yield job
-    //     case _ =>
-    //       for {
-    //         _ <- Try(client.stopJob(job.jobId))
-    //         _ <- Try(client.deleteJob(job.jobId))
-    //       } yield job
-    //   }
-    // }
-    // ()
+    batchJob.abort(job.jobId) // job.JobId should be the AWS Batch Job Id based on analysis of other backends
+    Log.info(s"Attempted CancelJob operation in AWS Batch for Job ID ${job.jobId}. There were no errors during the operation")
+    Log.info(s"We have normality. Anything you still can't cope with is therefore your own problem")
+    Log.info(s"https://www.youtube.com/watch?v=YCRxnjE7JVs")
     ()
   }
 
@@ -330,38 +356,9 @@ class AwsBatchAsyncBackendJobExecutionActor(override val standardParams: Standar
 
   // Primary entry point for cromwell to actually run something
   override def executeAsync(): Future[ExecutionHandle] = {
-
-    // Rundown of the command string:
-    //
-    // commandScriptContents: This is ErrorOr[String] that includes a full
-    //                        bash script designed to get output into a file
-    //                        It's defined in JobPaths.scala. Other backends
-    //                        do this funky "write to a file in the storage service,
-    //                        have the container pick up that file and run it" thing.
-    //
-    //                        But, I'm not convinced yet that Cromwell needs this,
-    //                        and I think that we can pass over to AWS Batch
-    //                        what is needed to run. So...why do anything like
-    //                        the following?
-    //
-    // commandScriptContents.fold(
-    //   errors => Future.failed(new RuntimeException(errors.toList.mkString(", "))),
-    //   callPaths.script.write)
-    //
-    //
-    // So, what we're passing to AwsBatchJob here is the literal command string -
-    //
-    // instantiatedCommand.commandString: This is an InstantiatedCommand class and holds
-    //                                    all the things about the command. It's defined
-    //                                    in StandardAsyncExecutionActor
-    val job = AwsBatchJob(
-                jobDescriptor,
-                runtimeAttributes,
-                instantiatedCommand.commandString,
-                Seq.empty[AwsBatchParameter]) // parameters)
     for {
-      submitJobResponse <- Future.fromTry(job.submitJob())
-    } yield PendingExecutionHandle(jobDescriptor, StandardAsyncJob(submitJobResponse.jobId), Option(job), previousStatus = None)
+      submitJobResponse <- Future.fromTry(batchJob.submitJob())
+    } yield PendingExecutionHandle(jobDescriptor, StandardAsyncJob(submitJobResponse.jobId), Option(batchJob), previousStatus = None)
   }
 
   val futureKvJobKey = KvJobKey(jobDescriptor.key.call.fullyQualifiedName, jobDescriptor.key.index, jobDescriptor.key.attempt + 1)

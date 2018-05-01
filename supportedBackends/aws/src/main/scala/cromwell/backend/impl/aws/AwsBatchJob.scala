@@ -34,6 +34,7 @@ import software.amazon.awssdk.services.batch.BatchClient
 import software.amazon.awssdk.services.batch.model.
                                         {
                                           CancelJobRequest,
+                                          CancelJobResponse,
                                           RegisterJobDefinitionRequest,
                                           SubmitJobRequest,
                                           SubmitJobResponse,
@@ -136,9 +137,7 @@ final case class AwsBatchJob(jobDescriptor: BackendJobDescriptor,           // W
      RunStatus.fromJobStatus(thisJob.status, jobId)
   }
 
-  def abort(jobId: String): Unit = {
+  def abort(jobId: String): CancelJobResponse = {
     client.cancelJob(CancelJobRequest.builder.jobId(jobId).reason("cromwell abort called").build)
-    // TODO: Cancel!
-    ()
   }
 }
