@@ -33,6 +33,7 @@ package cromwell.backend.impl.aws
 
 import java.net.SocketTimeoutException
 
+import cats.data.Validated.Valid
 import common.util.StringUtil._
 import common.validation.Validation._
 import cromwell.backend._
@@ -131,10 +132,17 @@ class AwsBatchAsyncBackendJobExecutionActor(override val standardParams: Standar
    * needs to push stuff out to S3. This is why we will eventually need
    * commandScriptContents here
    */
-  lazy val batchJob = AwsBatchJob(jobDescriptor, runtimeAttributes,
-                                  instantiatedCommand.commandString,
-                                  Seq.empty[AwsBatchParameter])
+  lazy val batchJob = {
+    val script = commandScriptContents match {
+      case Valid(s) => s
+      case errors => new RuntimeException(errors.toList.mkString(", "))
+    }
 
+    AwsBatchJob(jobDescriptor, runtimeAttributes,
+                                  instantiatedCommand.commandString,
+                                  script.toString,
+                                  Seq.empty[AwsBatchParameter])
+  }
   /* Tries to abort the job in flight
    *
    * @param job A StandardAsyncJob object (has jobId value) to cancel
@@ -318,10 +326,12 @@ class AwsBatchAsyncBackendJobExecutionActor(override val standardParams: Standar
   lazy val localMonitoringLogPath: Path = DefaultPathBuilder.get(callPaths.monitoringLogFilename)
   lazy val localMonitoringScriptPath: Path = DefaultPathBuilder.get(callPaths.monitoringScriptFilename)
 
+  // TODO: Determine the necessity for this monitoring stuff
   lazy val monitoringScript: Option[AwsBatchInput] = {
-    callPaths.workflowPaths.monitoringScriptPath map { path =>
-      AwsBatchFileInput(s"$monitoringParamName-in", path.pathAsString, localMonitoringScriptPath, workingDisk)
-    }
+    // callPaths.workflowPaths.monitoringScriptPath map { path =>
+    //   AwsBatchFileInput(s"$monitoringParamName-in", path.pathAsString, localMonitoringScriptPath, workingDisk)
+    // }
+    None
   }
 
   lazy val monitoringOutput: Option[AwsBatchFileOutput] = monitoringScript map { _ =>
@@ -363,32 +373,54 @@ class AwsBatchAsyncBackendJobExecutionActor(override val standardParams: Standar
 
   val futureKvJobKey = KvJobKey(jobDescriptor.key.call.fullyQualifiedName, jobDescriptor.key.index, jobDescriptor.key.attempt + 1)
 
-  // TODO: Is this needed? Others don't seem to need
-  // override def recoverAsync(jobId: StandardAsyncJob): Future[ExecutionHandle] = reconnectToExistingJob(jobId)
-  //
-  // override def reconnectAsync(jobId: StandardAsyncJob): Future[ExecutionHandle] = reconnectToExistingJob(jobId)
-  //
-  // override def reconnectToAbortAsync(jobId: StandardAsyncJob): Future[ExecutionHandle] = reconnectToExistingJob(jobId, forceAbort = true)
-
-  // private def createNewJob(): Future[ExecutionHandle] = {
-  // }
-
-  // override def pollStatusAsync(handle: AwsBatchPendingExecutionHandle): Future[RunStatus] = super[AwsBatchStatusRequestClient].pollStatus(workflowId, handle.runInfo.get)
-  //
   // This is called by Cromwell after initial execution (see executeAsync above)
   // It expects a Future[RunStatus]. In this case we'll simply call the
   // AWS Batch API to do this. The AwsBatchJob object in the PendingExecutionHandle
   // will have the actual status call, so our job here is simply to pull the
   // object out of the handle and execute the underlying status method
   override def pollStatusAsync(handle: AwsBatchPendingExecutionHandle): Future[RunStatus] = {
-     val jobId = handle.pendingJob.jobId
-     val job = handle.runInfo match {
-       case Some(job) => job
-       case None => throw new RuntimeException(s"pollStatusAsync called but job not available. This should not happen. Jobid ${jobId}")
-     }
-     Future.fromTry(job.status(jobId))
-   }
+    val jobId = handle.pendingJob.jobId
+    val job = handle.runInfo match {
+      case Some(job) => job
+      case None => throw new RuntimeException(s"pollStatusAsync called but job not available. This should not happen. Jobid ${jobId}")
+    }
+    val status = job.status(jobId)
+    status match {
+      case Success(runstatus) => { runstatus match {
+          case _: TerminalRunStatus => writeToPaths(jobId, job)
+          case _ => ()
+        }
+      }
+      case _ => ()
+    }
+    Future.fromTry(status)
+  }
 
+  /* Writes job output to location for Cromwell to run.
+   * This should be in S3. There is also some Cromwell lifecycle magic to handle
+   * something here, so I don't think this is the right location. The
+   * intent I believe is that the job writes it's own output, error, etc to
+   * S3, and through the magic that is the NIO Filesystem, we just automagically
+   * pick it up from there. However, AFAIK, there is no NIO Filesystem for
+   * AWS SDK v2 (preview 9). So, in AwsWorkflowPaths I've disconnected the
+   * S3 PathBuilder stuff in favor of just doing it like TES does, which is a
+   * local filesystem path. We'll pick up job information from CloudWatch Logs
+   * and the describejobs API call (via our AwsBatchJob object). This will
+   * need to be undone at some point and wired in more like the other backends.
+   *
+   *
+   */
+  private def writeToPaths(jobId: String, job: AwsBatchJob) = {
+    val detail = job.detail(jobId)
+    Log.info("Job Complete. Exit code: " + job.rc(detail))
+    Log.info("Job Output: " + job.output(detail))
+    jobPaths.standardPaths.output.createIfNotExists(asDirectory = false, createParents = true)
+    jobPaths.standardPaths.error.createIfNotExists(asDirectory = false, createParents = true)
+    jobPaths.returnCode.createIfNotExists(asDirectory = false, createParents = true)
+    jobPaths.standardPaths.output.write(job.output(detail))
+    jobPaths.standardPaths.error.touch()
+    jobPaths.returnCode.write(job.rc(detail).toString)
+  }
 
 
   override lazy val startMetadataKeyValues: Map[String, Any] = super[AwsBatchJobCachingActorHelper].startMetadataKeyValues

@@ -60,9 +60,9 @@ trait AwsBatchJobCachingActorHelper extends StandardCachingActorHelper {
 
   lazy val attributes: AwsBatchAttributes = configuration.batchAttributes
 
-  override protected def nonStandardMetadata: Map[String, Any] = {
-    Map(
-      AwsBatchMetadataKeys.ExecutionBucket -> initializationData.workflowPaths.executionRootString,
-    )
-  }
+  // override protected def nonStandardMetadata: Map[String, Any] = {
+  //   Map(
+  //     AwsBatchMetadataKeys.ExecutionBucket -> initializationData.workflowPaths.executionRootString,
+  //   )
+  // }
 }

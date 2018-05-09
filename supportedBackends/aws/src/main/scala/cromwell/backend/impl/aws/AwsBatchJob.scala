@@ -39,8 +39,11 @@ import software.amazon.awssdk.services.batch.model.
                                           SubmitJobRequest,
                                           SubmitJobResponse,
                                           DescribeJobsRequest,
-                                          JobDefinitionType
+                                          JobDefinitionType,
+                                          JobDetail
                                         }
+import software.amazon.awssdk.services.cloudwatchlogs.CloudWatchLogsClient
+import software.amazon.awssdk.services.cloudwatchlogs.model.GetLogEventsRequest
 import cromwell.backend.BackendJobDescriptor
 import org.slf4j.LoggerFactory
 
@@ -61,6 +64,7 @@ object AwsBatchJob
 final case class AwsBatchJob(jobDescriptor: BackendJobDescriptor,           // WDL
                              runtimeAttributes: AwsBatchRuntimeAttributes,  // config
                              commandLine: String,                           // WDL
+                             script: String,        // WDL
                              parameters: Seq[AwsBatchParameter]
                              ) {
 
@@ -68,6 +72,10 @@ final case class AwsBatchJob(jobDescriptor: BackendJobDescriptor,           // W
 
   // TODO: Auth, endpoint
   lazy val client = BatchClient.builder()
+                   // .credentialsProvider(...)
+                   // .endpointOverride(...)
+                   .build
+  lazy val logsclient = CloudWatchLogsClient.builder()
                    // .credentialsProvider(...)
                    // .endpointOverride(...)
                    .build
@@ -131,10 +139,28 @@ final case class AwsBatchJob(jobDescriptor: BackendJobDescriptor,           // W
    *
    */
   def status(jobId: String): Try[RunStatus] = {
+     RunStatus.fromJobStatus(detail(jobId).status, jobId)
+  }
+
+  def detail(jobId: String): JobDetail = {
      val describeJobsResponse = client.describeJobs(DescribeJobsRequest.builder.jobs(jobId).build)
      val jobs = describeJobsResponse.jobs.asScala.toSeq
-     val thisJob = jobs(0)
-     RunStatus.fromJobStatus(thisJob.status, jobId)
+     jobs(0)
+  }
+  def rc(detail: JobDetail): Integer = {
+     detail.container.exitCode
+  }
+
+  def output(detail: JobDetail): String = {
+     // List<OutputEvent>
+     val events = logsclient.getLogEvents(GetLogEventsRequest.builder
+                                            // http://aws-java-sdk-javadoc.s3-website-us-west-2.amazonaws.com/latest/software/amazon/awssdk/services/batch/model/ContainerDetail.html#logStreamName--
+                                            .logGroupName("/aws/batch/job")
+                                            .logStreamName(detail.container.logStreamName)
+                                            .startFromHead(true)
+                                            .build).events.asScala.toSeq
+     val eventMessages = for ( event <- events ) yield event.message
+     eventMessages mkString "\n"
   }
 
   def abort(jobId: String): CancelJobResponse = {
