@@ -411,9 +411,19 @@ class AwsBatchAsyncBackendJobExecutionActor(override val standardParams: Standar
    *
    */
   private def writeToPaths(jobId: String, job: AwsBatchJob) = {
+    import cromwell.core.path.DefaultPathBuilder
     val detail = job.detail(jobId)
     Log.info("Job Complete. Exit code: " + job.rc(detail))
-    Log.info("Job Output: " + job.output(detail))
+    // TODO: Woah! Is this ugly! We really need to unwind these three lines
+    //       and figure out why we're getting a combined callRoot + standardPaths.output
+    //       The problem here is that output validation comes from a Future
+    //       somewhere and it's been elusive to track down.
+    val combinedstdoutPath = DefaultPathBuilder.get(jobPaths.callRoot + jobPaths.standardPaths.output.toString)
+    combinedstdoutPath.createIfNotExists(asDirectory = false, createParents = true)
+    combinedstdoutPath.write(job.output(detail))
+
+    // The rest of this is relatively cool, although it doesn't belong in this part of the
+    // lifecycle
     jobPaths.standardPaths.output.createIfNotExists(asDirectory = false, createParents = true)
     jobPaths.standardPaths.error.createIfNotExists(asDirectory = false, createParents = true)
     jobPaths.returnCode.createIfNotExists(asDirectory = false, createParents = true)
