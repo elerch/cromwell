@@ -40,7 +40,7 @@ import cromwell.backend.standard.{StandardInitializationActor,
                                   StandardInitializationActorParams,
                                   StandardValidatedRuntimeAttributesBuilder}
 import cromwell.backend.{BackendConfigurationDescriptor,
-                         BackendInitializationData, BackendWorkflowDescriptor}
+                         BackendWorkflowDescriptor}
 import cromwell.core.io.AsyncIoActorClient
 import cromwell.core.path.Path
 import wom.graph.CommandCallNode
@@ -85,15 +85,6 @@ class AwsBatchInitializationActor(params: AwsBatchInitializationActorParams)
     workflowPaths <- workflowPaths
     creds <- credentials
   } yield AwsBatchBackendInitializationData(workflowPaths, runtimeAttributesBuilder, configuration, creds)
-
-  override def beforeAll(): Future[Option[BackendInitializationData]] = {
-    for {
-      paths <- workflowPaths
-      _ = publishWorkflowRoot(paths.workflowRoot.pathAsString)
-      _ <- Future.successful(())
-      data <- initializationData
-    } yield Option(data)
-  }
 
   override lazy val ioCommandBuilder = S3BatchCommandBuilder
 }
