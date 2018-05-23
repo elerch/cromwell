@@ -60,12 +60,5 @@ class AwsBatchFinalizationActor(val params: AwsBatchFinalizationActorParams)
 
   override lazy val ioCommandBuilder = S3BatchCommandBuilder
 
-  // Placeholder for any cleanup necessary
-  override def afterAll(): Future[Unit] = {
-    for {
-      _ <- super.afterAll()
-    } yield ()
-  }
-
   override def ioActor: ActorRef = params.ioActor
 }
