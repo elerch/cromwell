@@ -93,6 +93,7 @@ object AwsBatchRuntimeAttributes {
       MemoryValidation.configDefaultString(RuntimeAttributesKeys.MemoryKey, runtimeConfig) getOrElse MemoryDefaultValue)
   }
 
+
   private def memoryMinValidation(runtimeConfig: Option[Config]): RuntimeAttributesValidation[MemorySize] = {
     MemoryValidation.withDefaultMemory(
       RuntimeAttributesKeys.MemoryMinKey,
@@ -104,8 +105,9 @@ object AwsBatchRuntimeAttributes {
 
   private val dockerValidation: RuntimeAttributesValidation[String] = DockerValidation.instance
 
-  private def queueArnValidation: RuntimeAttributesValidation[String] =
-    ArnValidation(AwsBatchRuntimeAttributes.QueueArnKey)
+  private def queueArnValidation(runtimeConfig: Option[Config]): RuntimeAttributesValidation[String] =
+    QueueArnValidation.instance.withDefault(QueueArnValidation.configDefaultWomValue(runtimeConfig) getOrElse
+      (throw new RuntimeException(s"""queueArn is required""")))
 
   def runtimeAttributesBuilder(configuration: AwsBatchConfiguration): StandardValidatedRuntimeAttributesBuilder = {
     val runtimeConfig = configuration.runtimeConfig
@@ -118,7 +120,7 @@ object AwsBatchRuntimeAttributes {
       memoryMinValidation(runtimeConfig),
       noAddressValidation(runtimeConfig),
       dockerValidation,
-      queueArnValidation
+      queueArnValidation(runtimeConfig)
     )
   }
 
@@ -128,7 +130,7 @@ object AwsBatchRuntimeAttributes {
     val memory: MemorySize = RuntimeAttributesValidation.extract(memoryValidation(runtimeAttrsConfig), validatedRuntimeAttributes)
     val disks: Seq[AwsBatchVolume] = RuntimeAttributesValidation.extract(disksValidation(runtimeAttrsConfig), validatedRuntimeAttributes)
     val docker: String = RuntimeAttributesValidation.extract(dockerValidation, validatedRuntimeAttributes)
-    val queueArn: String = RuntimeAttributesValidation.extract(queueArnValidation, validatedRuntimeAttributes)
+    val queueArn: String = RuntimeAttributesValidation.extract(queueArnValidation(runtimeAttrsConfig), validatedRuntimeAttributes)
     val failOnStderr: Boolean = RuntimeAttributesValidation.extract(failOnStderrValidation(runtimeAttrsConfig), validatedRuntimeAttributes)
     val continueOnReturnCode: ContinueOnReturnCode = RuntimeAttributesValidation.extract(continueOnReturnCodeValidation(runtimeAttrsConfig), validatedRuntimeAttributes)
     val noAddress: Boolean = RuntimeAttributesValidation.extract(noAddressValidation(runtimeAttrsConfig), validatedRuntimeAttributes)
@@ -147,6 +149,11 @@ object AwsBatchRuntimeAttributes {
   }
 }
 
+object QueueArnValidation {
+  lazy val instance: RuntimeAttributesValidation[String] = ArnValidation(AwsBatchRuntimeAttributes.QueueArnKey)
+
+  def configDefaultWomValue(config: Option[Config]): Option[WomValue] = instance.configDefaultWomValue(config)
+}
 // TODO: provide arn regexp validation here
 object ArnValidation {
   def apply(key: String): ArnValidation = new ArnValidation(key)
