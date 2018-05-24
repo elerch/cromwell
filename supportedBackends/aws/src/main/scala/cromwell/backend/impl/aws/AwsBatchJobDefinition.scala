@@ -67,13 +67,7 @@ trait AwsBatchJobDefinitionBuilder {
    *
    */
   def builder(commandLine: String, dockerImage: String): ContainerProperties.Builder =
-    ContainerProperties.builder().command("/bin/sh", "-c", commandLine).image(dockerImage)
-
-  // NOTE: The builder command above uses /bin/sh. This is inconsistent with
-  //       other backends, but I think this is a better default. Bash is unavailable
-  //       by default in alpine linux, for instance. It's also smaller and faster.
-  //       Bash features can be provided by using your own "/bin/bash -c" in the task
-  //       definition. The only downside is its inconsistency with other backends
+    ContainerProperties.builder().command("/bin/bash", "-c", commandLine).image(dockerImage)
 
   def buildResources(builder: ContainerProperties.Builder, runtimeAttributes: AwsBatchRuntimeAttributes): ContainerProperties.Builder = {
     builder
