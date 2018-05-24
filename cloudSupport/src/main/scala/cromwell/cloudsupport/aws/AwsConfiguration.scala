@@ -137,27 +137,15 @@ object AwsConfiguration {
       // Look for the base auth from the config. If we find it, we'll assign
       // here. Unfortunately, we will rely on a runtime error if the base auth
       // does not end up getting assigned to the AssumeRoleMode object
-      val baseAuth = { validAuths.collectFirst { case a if a.name == dependentAuth.baseAuthName => a } }
-      baseAuth match {
-        case Some(auth) => dependentAuth.assign(auth)
-        case _ => ()
-      }
+      val baseAuth = validAuths.collectFirst { case a if a.name == dependentAuth.baseAuthName => a }
+      baseAuth foreach dependentAuth.assign
     }
 
     def assignDependencies(auths: List[ErrorOr[AwsAuthMode]]): List[ErrorOr[AwsAuthMode]] = {
       // Assume role is somewhat special. We need to process assume role type
       // auths after its base auth is created. As such, we'll wire in the
       // base auth element after the list is created
-
-      auths.filter(_.isValid).map(_.toOption).map{
-          case Some(v) => v
-          case _ => throw new RuntimeException(s"this code should not be reached")}
-        .foreach({
-          _ match {
-            case assumeRoleInstance: AssumeRoleMode => assignDependency(assumeRoleInstance, auths)
-            case _ => ()
-          }
-      })
+      auths.collect { case Valid(arm: AssumeRoleMode) => assignDependency(arm, auths) }
       auths
     }
     val listOfErrorOrAuths: List[ErrorOr[AwsAuthMode]] =
