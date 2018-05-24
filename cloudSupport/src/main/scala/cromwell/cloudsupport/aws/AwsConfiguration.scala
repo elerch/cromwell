@@ -132,13 +132,8 @@ object AwsConfiguration {
       // We only care here about valid auth blocks. If something is invalid
       // we need to throw at some point anyway. This helps unwrap some of the
       // validation type wrappers that are involved at this point in the code
-      val validAuths = auths
-                        .filter(_.isValid)
-                        .map(_.toOption)
-                        .map{
-                          case Some(o) => o;
-                          case _ => throw new RuntimeException("Should not be reached")
-                        }
+      val validAuths = auths.collect { case Valid(v) => v }
+
       // Look for the base auth from the config. If we find it, we'll assign
       // here. Unfortunately, we will rely on a runtime error if the base auth
       // does not end up getting assigned to the AssumeRoleMode object
