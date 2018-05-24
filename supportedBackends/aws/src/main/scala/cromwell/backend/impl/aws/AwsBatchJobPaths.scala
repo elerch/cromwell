@@ -67,8 +67,6 @@ final case class AwsBatchJobPaths(override val workflowPaths: AwsBatchWorkflowPa
 
   override lazy val customMetadataPaths = Map(
     CallMetadataKeys.BackendLogsPrefix + ":log" -> logPath
-  ) ++ (
-    Map.empty
   )
 
   override lazy val customDetritusPaths: Map[String, Path] = Map(
