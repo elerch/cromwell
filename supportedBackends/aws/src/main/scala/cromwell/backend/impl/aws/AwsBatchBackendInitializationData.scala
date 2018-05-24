@@ -40,7 +40,7 @@ case class AwsBatchBackendInitializationData
   override val runtimeAttributesBuilder: StandardValidatedRuntimeAttributesBuilder,
   configuration: AwsBatchConfiguration,
   credentials: AwsCredentials,
-  // TODO: We'll need soemthing specific for batch probably, but I need to
+  // TODO: We'll need something specific for batch probably, but I need to
   //       understand more about the genomics node first
   //genomics: Genomics
 ) extends StandardInitializationData(workflowPaths, runtimeAttributesBuilder, classOf[AwsBatchExpressionFunctions])

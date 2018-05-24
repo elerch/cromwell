@@ -61,10 +61,10 @@ object AwsBatchJob
  *  @param runtimeAttributes runtime attributes class (which subsequently pulls from config)
  *  @param commandLine command line to be passed to the job
  */
-final case class AwsBatchJob(jobDescriptor: BackendJobDescriptor,           // WDL
-                             runtimeAttributes: AwsBatchRuntimeAttributes,  // config
-                             commandLine: String,                           // WDL
-                             script: String,        // WDL
+final case class AwsBatchJob(jobDescriptor: BackendJobDescriptor,           // WDL/CWL
+                             runtimeAttributes: AwsBatchRuntimeAttributes,  // config or WDL/CWL
+                             commandLine: String,                           // WDL/CWL
+                             script: String,                                // WDL/CWL
                              parameters: Seq[AwsBatchParameter]
                              ) {
 
@@ -132,7 +132,7 @@ final case class AwsBatchJob(jobDescriptor: BackendJobDescriptor,           // W
     client.registerJobDefinition(definitionRequest).jobDefinitionArn
   }
 
-  /** Gets the status of a job by it's Id, converted to a RunStatus
+  /** Gets the status of a job by its Id, converted to a RunStatus
    *
    *  @param jobId Job ID as defined in AWS Batch
    *  @return Current RunStatus
