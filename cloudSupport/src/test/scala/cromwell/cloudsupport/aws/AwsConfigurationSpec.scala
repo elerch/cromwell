@@ -166,19 +166,6 @@ class AwsConfigurationSpec extends FlatSpec with Matchers {
         .invalidNel)
   }
 
-  // it should "create an initializer with custom timeouts" in {
-  //   val transport = new MockHttpTransport()
-  //   val initializer = AwsConfiguration.withCustomTimeouts(request => {
-  //     request.getHeaders.set("custom_init", "ok")
-  //     ()
-  //   })
-  //   val factory = transport.createRequestFactory(initializer)
-  //   val request = factory.buildGetRequest(new GenericUrl(new URL("http://example.com")))
-  //   request.getConnectTimeout should be(180000)
-  //   request.getReadTimeout should be(180000)
-  //   request.getHeaders.get("custom_init") should be("ok")
-  // }
-
   it should "not parse a configuration stanza without applicationName" in {
     val applessAwsConfig =
       """
