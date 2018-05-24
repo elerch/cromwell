@@ -90,9 +90,6 @@ class AwsBatchAsyncBackendJobExecutionActor(override val standardParams: Standar
 
   override lazy val pollBackOff = SimpleExponentialBackoff(1.second, 5.minutes, 1.1)
 
-  // override lazy val pollBackOff = SimpleExponentialBackoff(
-  //   initialInterval = 30 seconds, maxInterval = attributes.maxPollingInterval seconds, multiplier = 1.1)
-
   override lazy val executeOrRecoverBackOff = SimpleExponentialBackoff(
     initialInterval = 3 seconds, maxInterval = 20 seconds, multiplier = 1.1)
 
@@ -385,14 +382,7 @@ class AwsBatchAsyncBackendJobExecutionActor(override val standardParams: Standar
       case None => throw new RuntimeException(s"pollStatusAsync called but job not available. This should not happen. Jobid ${jobId}")
     }
     val status = job.status(jobId)
-    status match {
-      case Success(runstatus) => { runstatus match {
-          case _: TerminalRunStatus => writeToPaths(jobId, job)
-          case _ => ()
-        }
-      }
-      case _ => ()
-    }
+    status collect { case _: TerminalRunStatus => writeToPaths(jobId, job) }
     Future.fromTry(status)
   }
 
