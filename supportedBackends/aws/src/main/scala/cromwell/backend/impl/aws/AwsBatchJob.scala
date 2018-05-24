@@ -159,7 +159,7 @@ final case class AwsBatchJob(jobDescriptor: BackendJobDescriptor,           // W
                                             .logStreamName(detail.container.logStreamName)
                                             .startFromHead(true)
                                             .build).events.asScala.toSeq
-     val eventMessages = for ( event <- events ) yield event.message
+     val eventMessages = for ( event <- events ) yield events map { _.message }
      eventMessages mkString "\n"
   }
 
