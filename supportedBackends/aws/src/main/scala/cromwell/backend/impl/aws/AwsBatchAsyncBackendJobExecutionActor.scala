@@ -37,7 +37,7 @@ import cats.data.Validated.Valid
 import common.util.StringUtil._
 import common.validation.Validation._
 import cromwell.backend._
-import cromwell.backend.async.{AbortedExecutionHandle, ExecutionHandle, PendingExecutionHandle}
+import cromwell.backend.async.{AbortedExecutionHandle, ExecutionHandle, PendingExecutionHandle,FailedNonRetryableExecutionHandle}
 import cromwell.backend.impl.aws.RunStatus.TerminalRunStatus
 import cromwell.backend.impl.aws.io._
 import cromwell.backend.io.DirectoryFunctions
@@ -473,7 +473,7 @@ class AwsBatchAsyncBackendJobExecutionActor(override val standardParams: Standar
                                       returnCode: Option[Int]): Future[ExecutionHandle] = {
     runStatus match {
       case _: RunStatus.Cancelled => Future.successful(AbortedExecutionHandle)
-      case _: RunStatus.UnsuccessfulRunStatus => Future.successful(AbortedExecutionHandle)
+      case _: RunStatus.UnsuccessfulRunStatus => Future.successful(new FailedNonRetryableExecutionHandle(new RuntimeException(s"Fatal error"), returnCode))
       case unknown => throw new RuntimeException(s"handleExecutionFailure not called with RunStatus.Failed. Instead got $unknown")
     }
   }

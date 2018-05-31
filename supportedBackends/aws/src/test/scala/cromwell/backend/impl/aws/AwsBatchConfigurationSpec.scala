@@ -79,9 +79,7 @@ class AwsBatchConfigurationSpec extends FlatSpec with Matchers with TableDrivenP
       |  // Base bucket for workflow executions
       |  root = "s3://my-cromwell-workflows-bucket"
       |
-      |  // Polling for completion backs-off gradually for slower-running jobs.
-      |  // This is the maximum polling interval (in seconds):
-      |  maximum-polling-interval = 600
+      |  auth = "application-default"
       |
       |  default-runtime-attributes {
       |      failOnStderr: false

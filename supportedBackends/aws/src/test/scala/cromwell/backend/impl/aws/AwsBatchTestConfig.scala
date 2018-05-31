@@ -46,6 +46,8 @@ object AwsBatchTestConfig {
       |  }
       |}
       |
+      |auth = "default"
+      |
       |default-runtime-attributes {
       |    cpu: 1
       |    failOnStderr: false
@@ -55,6 +57,7 @@ object AwsBatchTestConfig {
       |    disks: "local-disk"
       |    noAddress: false
       |    zones:["us-east-1a", "us-east-1b"]
+      |    queueArn: "arn::::"
       |}
       |
       |""".stripMargin
@@ -62,6 +65,8 @@ object AwsBatchTestConfig {
   private val NoDefaultsConfigString =
     """
       |root = "s3://my-cromwell-workflows-bucket"
+      |
+      |auth = "default"
       |
       |filesystems {
       |  s3 {

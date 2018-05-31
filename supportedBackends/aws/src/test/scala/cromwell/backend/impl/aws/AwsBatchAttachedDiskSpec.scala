@@ -42,9 +42,11 @@ import org.scalatest.{FlatSpec, Matchers, TryValues}
 class AwsBatchAttachedDiskSpec extends FlatSpec with Matchers with TryValues {
   val validTable = Table(
     ("unparsed", "parsed"),
-    ("/mnt", AwsBatchEmptyMountedDisk(DefaultPathBuilder.get("/mnt"))),
-    ("/mnt/my_path", AwsBatchEmptyMountedDisk(DefaultPathBuilder.get("/mnt/my_path"))),
-    ("local-disk", AwsBatchWorkingDisk()),
+    // AwsBatchEmptyMountedDisk has a toString override that uses the MD5sum of
+    // the mount path in the return value, so these values are deterministic
+    ("d-39de0dbcfb68c8735bd088c62fa061a4 /mnt", AwsBatchEmptyMountedDisk(DefaultPathBuilder.get("/mnt"))),
+    ("d-753b3ff55ce6e29b10951ad6190f7c84 /mnt/my_path", AwsBatchEmptyMountedDisk(DefaultPathBuilder.get("/mnt/my_path"))),
+    ("local-disk /cromwell_root", AwsBatchWorkingDisk()),
   )
 
   // TODO: Work through this syntax
