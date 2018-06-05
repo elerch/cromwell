@@ -31,7 +31,7 @@
 
 package cromwell.backend.impl.aws
 
-import wdl4s.parser.MemoryUnit
+import scala.language.postfixOps
 import software.amazon.awssdk.services.batch.model.{
                                         // KeyValuePair,
                                         ContainerProperties //,
@@ -71,8 +71,8 @@ trait AwsBatchJobDefinitionBuilder {
 
   def buildResources(builder: ContainerProperties.Builder, runtimeAttributes: AwsBatchRuntimeAttributes): ContainerProperties.Builder = {
     builder
-      .memory(runtimeAttributes.memory.to(MemoryUnit.MB).amount.toInt)
-      .vcpus(runtimeAttributes.cpu)
+      .memory(runtimeAttributes.memory.toMegabytes.toInt)
+      .vcpus(runtimeAttributes.cpu##)
       .volumes(runtimeAttributes.disks.map(_.toVolume).asJava)
   }
 

@@ -37,7 +37,7 @@ import cats.data.Validated.Valid
 import common.util.StringUtil._
 import common.validation.Validation._
 import cromwell.backend._
-import cromwell.backend.async.{AbortedExecutionHandle, ExecutionHandle, PendingExecutionHandle,FailedNonRetryableExecutionHandle}
+import cromwell.backend.async.{ExecutionHandle, PendingExecutionHandle}
 import cromwell.backend.impl.aws.RunStatus.TerminalRunStatus
 import cromwell.backend.impl.aws.io._
 import cromwell.backend.io.DirectoryFunctions
@@ -412,14 +412,6 @@ class AwsBatchAsyncBackendJobExecutionActor(override val standardParams: Standar
     }
   }
 
-  override def isSuccess(runStatus: RunStatus): Boolean = {
-    runStatus match {
-      case _: RunStatus.Succeeded => true
-      case _: RunStatus.UnsuccessfulRunStatus => false
-      case _ => throw new RuntimeException(s"Cromwell programmer blunder: isSuccess was called on an incomplete RunStatus ($runStatus).")
-    }
-  }
-
   override def getTerminalEvents(runStatus: RunStatus): Seq[ExecutionEvent] = {
     runStatus match {
       case successStatus: RunStatus.Succeeded => successStatus.eventList
@@ -433,16 +425,6 @@ class AwsBatchAsyncBackendJobExecutionActor(override val standardParams: Standar
       case aggregated: CromwellAggregatedException =>
         aggregated.throwables.collectFirst { case s: SocketTimeoutException => s }.isDefined
       case _ => false
-    }
-  }
-
-  override def handleExecutionFailure(runStatus: RunStatus,
-                                      handle: StandardAsyncPendingExecutionHandle,
-                                      returnCode: Option[Int]): Future[ExecutionHandle] = {
-    runStatus match {
-      case _: RunStatus.Cancelled => Future.successful(AbortedExecutionHandle)
-      case _: RunStatus.UnsuccessfulRunStatus => Future.successful(new FailedNonRetryableExecutionHandle(new RuntimeException(s"Fatal error"), returnCode))
-      case unknown => throw new RuntimeException(s"handleExecutionFailure not called with RunStatus.Failed. Instead got $unknown")
     }
   }
 
