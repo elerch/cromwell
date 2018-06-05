@@ -31,7 +31,6 @@
 package cromwell.filesystems.s3
 
 import java.net.URI
-import java.nio.file.Paths
 import com.google.common.net.UrlEscapers
 import software.amazon.awssdk.core.auth.AwsCredentials
 import software.amazon.awssdk.services.s3.{S3AdvancedConfiguration,S3Client}
@@ -40,6 +39,7 @@ import cromwell.cloudsupport.aws.s3.S3Storage
 import cromwell.core.WorkflowOptions
 import cromwell.core.path.{NioPath, Path, PathBuilder}
 import cromwell.filesystems.s3.S3PathBuilder._
+import org.lerch.s3fs.S3FileSystemProvider
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
@@ -93,9 +93,12 @@ object S3PathBuilder {
     case _ => None
   }
 
+  def pathToUri(string: String): URI =
+    URI.create(UrlEscapers.urlFragmentEscaper.escape(string))
+
   def validatePath(string: String): S3PathValidation = {
     Try {
-      val uri = URI.create(UrlEscapers.urlFragmentEscaper.escape(string))
+      val uri = pathToUri(string)
       if (uri.getScheme == null) { PossiblyValidRelativeS3Path }
       else if (uri.getScheme.equalsIgnoreCase("s3")) {
         if (uri.getHost == null) {
@@ -106,8 +109,6 @@ object S3PathBuilder {
   }
 
   // TODO: Evaluate and remove or re-implement
-  // We aren't using a S3 Filesystem provider. Leaving this commented because
-  // someone might be dependent on it later
   // def isS3Path(nioPath: NioPath): Boolean = {
   //   nioPath.getFileSystem.provider().getScheme.equalsIgnoreCase("s3")
   // }
@@ -135,22 +136,22 @@ object S3PathBuilder {
 class S3PathBuilder(client: S3Client,
                      configuration: S3AdvancedConfiguration
                      ) extends PathBuilder {
-
-
   // Tries to create a new S3Path from a String representing an absolute s3 path: s3://<bucket>[/<key>].
   def build(string: String): Try[S3Path] = {
     validatePath(string) match {
       case ValidFullS3Path(bucket, path) =>
         Try {
-          // TODO: Verify that the s3:// doesn't get in the way of this...
-          S3Path(Paths.get(path), bucket, client)
+          // TODO: System.getenv needs to turn into a full Auth thingy
+          // TODO: This assumes the "global endpoint". Need to handle other endpoints
+          val s3Path = new S3FileSystemProvider().getFileSystem(URI.create("s3:////"), System.getenv).getPath(s"""/${bucket}/${path}""")
+          S3Path(s3Path, bucket, client)
         }
       case PossiblyValidRelativeS3Path => Failure(new IllegalArgumentException(s"$string does not have a s3 scheme"))
       case invalid: InvalidS3Path => Failure(new IllegalArgumentException(invalid.errorMessage))
     }
   }
 
-  override def name: String = "S3"
+  override def name: String = "s3"
 }
 
 case class S3Path private[s3](nioPath: NioPath,
@@ -160,16 +161,26 @@ case class S3Path private[s3](nioPath: NioPath,
   override protected def newPath(nioPath: NioPath): S3Path = S3Path(nioPath, bucket, client)
 
   override def pathAsString: String = {
-    val host = bucket.stripSuffix("/")
-    val path = nioPath.toString.stripPrefix("/")
-    s"s3://$host/$path"
+    // pathWithoutScheme will have a leading '/', so by only prepending 's3:/', we'll end up with s3:// as expected
+    s"s3:/${pathWithoutScheme}"
   }
 
-  override def pathWithoutScheme: String = {
-    bucket + nioPath.toAbsolutePath.toString
-  }
+  override def pathWithoutScheme: String =
+   safeAbsolutePath.stripPrefix("s3://s3.amazonaws.com")
 
-  def key: String = {
-    nioPath.toAbsolutePath.toString
+  def key: String = safeAbsolutePath
+
+  /** Gets an absolute path for multiple forms of input. The FS provider does
+   *  not support "toAbsolutePath" on forms such as "mypath/" or "foo.bar"
+   *  So this function will prepend a forward slash for input that looks like this
+   *  while leaving properly rooted input or input beginning with s3:// alone
+   */
+  def safeAbsolutePath: String = {
+    val originalPath = nioPath.toString
+    if (originalPath.startsWith("s3")) return nioPath.toAbsolutePath.toString
+    originalPath.charAt(0) match {
+      case '/' =>  nioPath.toAbsolutePath.toString
+      case _ => nioPath.resolve(s"/${bucket}/${originalPath}").toAbsolutePath.toString
+    }
   }
 }
