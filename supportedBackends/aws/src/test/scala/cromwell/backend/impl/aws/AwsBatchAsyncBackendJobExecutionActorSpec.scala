@@ -52,7 +52,6 @@ import cromwell.backend.impl.aws.io.AwsBatchWorkingDisk
 import cromwell.backend.io.JobPathsSpecHelper._
 import cromwell.backend.standard.{DefaultStandardAsyncExecutionActorParams, StandardAsyncExecutionActorParams, StandardAsyncJob, StandardExpressionFunctionsParams}
 import cromwell.cloudsupport.aws.s3.S3Storage
-import cromwell.core.Tags.PostWomTest
 import cromwell.core._
 import cromwell.core.callcaching.NoDocker
 import cromwell.core.labels.Labels
@@ -399,7 +398,7 @@ class AwsBatchAsyncBackendJobExecutionActorSpec extends TestKitSuite("AwsBatchAs
     actorRef.stop()
   }
 
-  it should "map paths and *only* foreign paths to local" taggedAs PostWomTest ignore {
+  it should "map paths and *only* foreign paths to local" ignore {
     val stringKey = "abc"
     val stringVal = WomString("abc")
     val localFileKey = "lf"
@@ -465,7 +464,7 @@ class AwsBatchAsyncBackendJobExecutionActorSpec extends TestKitSuite("AwsBatchAs
   private val dockerAndDiskWdlNamespace = WdlNamespaceWithWorkflow.load(SampleWdl.CurrentDirectory.asWorkflowSources(DockerAndDiskRuntime).workflowSource,
     Seq.empty[Draft2ImportResolver]).get
 
-  it should "generate correct AwsBatchFileInputs from a WdlMap" taggedAs PostWomTest ignore {
+  it should "generate correct AwsBatchFileInputs from a WdlMap" ignore {
     val inputs: Map[String, WomValue] = Map(
       "stringToFileMap" -> WomMap(WomMapType(WomStringType, WomSingleFileType), Map(
         WomString("stringTofile1") -> WomSingleFile("s3://path/to/stringTofile1"),
@@ -560,7 +559,7 @@ class AwsBatchAsyncBackendJobExecutionActorSpec extends TestKitSuite("AwsBatchAs
     }
   }
 
-  it should "generate correct AwsBatchOutputs" taggedAs PostWomTest ignore {
+  it should "generate correct AwsBatchOutputs" ignore {
     val inputs = Map(
       "in" -> WomSingleFile("s3://blah/b/c.txt")
     )
@@ -576,7 +575,7 @@ class AwsBatchAsyncBackendJobExecutionActorSpec extends TestKitSuite("AwsBatchAs
       s"s3://my-cromwell-workflows-bucket/file_passing/$workflowId/call-a/out", DefaultPathBuilder.get("out"), workingDisk))
   }
 
-  it should "generate correct AwsBatchInputs when a command line contains a write_lines call in it" taggedAs PostWomTest ignore {
+  it should "generate correct AwsBatchInputs when a command line contains a write_lines call in it" ignore {
     val inputs = Map(
       "strs" -> WomArray(WomArrayType(WomStringType), Seq("A", "B", "C").map(WomString))
     )
@@ -598,7 +597,7 @@ class AwsBatchAsyncBackendJobExecutionActorSpec extends TestKitSuite("AwsBatchAs
     outputs should have size 0
   }
 
-  it should "generate correct AwsBatchFileInputs from a WdlArray" taggedAs PostWomTest ignore {
+  it should "generate correct AwsBatchFileInputs from a WdlArray" ignore {
     val inputs: Map[String, WomValue] = Map(
       "fileArray" ->
         WomArray(WomArrayType(WomSingleFileType), Seq(WomSingleFile("s3://path/to/file1"), WomSingleFile("s3://path/to/file2")))
@@ -633,7 +632,7 @@ class AwsBatchAsyncBackendJobExecutionActorSpec extends TestKitSuite("AwsBatchAs
     }
   }
 
-  it should "generate correct AwsBatchFileInputs from a WdlFile" taggedAs PostWomTest ignore {
+  it should "generate correct AwsBatchFileInputs from a WdlFile" ignore {
     val inputs: Map[String, WomValue] = Map(
       "file1" -> WomSingleFile("s3://path/to/file1"),
       "file2" -> WomSingleFile("s3://path/to/file2")
@@ -757,7 +756,7 @@ class AwsBatchAsyncBackendJobExecutionActorSpec extends TestKitSuite("AwsBatchAs
       "s3://path/to/root/wf_hello/e6236763-c518-41d0-9688-432549a8bf7c/call-hello/hello.log"
   }
 
-  it should "return log paths for scattered call" taggedAs PostWomTest ignore {
+  it should "return log paths for scattered call" ignore {
     val workflowDescriptor = BackendWorkflowDescriptor(
       WorkflowId(UUID.fromString("e6236763-c518-41d0-9688-432549a8bf7d")),
       WdlNamespaceWithWorkflow.load(
