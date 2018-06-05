@@ -44,7 +44,7 @@ import cromwell.filesystems.s3.S3PathBuilder
 import scala.language.postfixOps
 
 object AwsBatchWorkflowPaths {
-  private val RootOptionKey = "s3_root"
+  private val RootOptionKey = "aws_s3_root"
   private val AuthFilePathOptionKey = "auth_bucket"
 }
 

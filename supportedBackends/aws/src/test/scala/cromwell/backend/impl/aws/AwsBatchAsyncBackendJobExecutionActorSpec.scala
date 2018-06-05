@@ -730,7 +730,7 @@ class AwsBatchAsyncBackendJobExecutionActorSpec extends TestKitSuite("AwsBatchAs
         SampleWdl.HelloWorld.asWorkflowSources(""" runtime {docker: "ubuntu:latest"} """).workflowSource,
         Seq.empty[Draft2ImportResolver]).get.workflow.toWomWorkflowDefinition(isASubworkflow = false).getOrElse(fail("failed to get WomDefinition from WdlWorkflow")),
       Map.empty,
-      WorkflowOptions.fromJsonString(""" {"root": "s3://path/to/root"} """).get,
+      WorkflowOptions.fromJsonString(""" {"aws_s3_root": "s3://path/to/root"} """).get,
       Labels.empty
     )
 
