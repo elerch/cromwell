@@ -124,13 +124,26 @@ final case class AwsBatchJob(jobDescriptor: BackendJobDescriptor,           // W
     // http://aws-java-sdk-javadoc.s3-website-us-west-2.amazonaws.com/latest/software/amazon/awssdk/services/batch/model/RegisterJobDefinitionRequest.Builder.html
     val definitionRequest = RegisterJobDefinitionRequest.builder
                               .containerProperties(jobDefinition.containerProperties)
-                              .jobDefinitionName(name)
+                              .jobDefinitionName(sanitize(name))
                               // See https://stackoverflow.com/questions/24349517/scala-method-named-type
                               .`type`(JobDefinitionType.CONTAINER)
                               .build
 
     client.registerJobDefinition(definitionRequest).jobDefinitionArn
   }
+
+  /** Sanitizes a job definition name
+   *
+   *  @param name Job definition name
+   *  @return Sanitized name
+   *
+   */
+  private def sanitize(name: String): String =
+    // Up to 128 letters (uppercase and lowercase), numbers, hyphens, and underscores are allowed.
+    // We'll replace all invalid characters with an underscore
+    name
+      .replaceAll("[^A-Za-z0-9_\\-]", "_")
+      .slice(0,128)
 
   /** Gets the status of a job by its Id, converted to a RunStatus
    *
