@@ -724,51 +724,6 @@ class AwsBatchAsyncBackendJobExecutionActorSpec extends TestKitSuite("AwsBatchAs
     )
   }
 
-  it should "create a AwsBatchFileInput for the monitoring script, when specified" in {
-    val workflowDescriptor = BackendWorkflowDescriptor(
-      WorkflowId.randomId(),
-      WdlNamespaceWithWorkflow.load(SampleWdl.EmptyString.asWorkflowSources(DockerAndDiskRuntime).workflowSource,
-        Seq.empty[Draft2ImportResolver]).get.workflow.toWomWorkflowDefinition(isASubworkflow = false).getOrElse(fail("failed to get WomDefinition from WdlWorkflow")),
-      Map.empty,
-      WorkflowOptions.fromJsonString("""{"monitoring_script": "s3://path/to/script"}""").get,
-      Labels.empty
-    )
-
-    val job: CommandCallNode = workflowDescriptor.callable.taskCallNodes.head
-    val runtimeAttributes = makeRuntimeAttributes(job)
-    val key = BackendJobDescriptorKey(job, None, 1)
-    val jobDescriptor = BackendJobDescriptor(workflowDescriptor, key, runtimeAttributes, Map.empty, NoDocker, Map.empty)
-
-    val props = Props(new TestableAwsBatchJobExecutionActor(jobDescriptor, Promise(), configuration))
-    val testActorRef = TestActorRef[TestableAwsBatchJobExecutionActor](
-      props, s"TestableAwsBatchJobExecutionActor-${jobDescriptor.workflowDescriptor.id}")
-
-    testActorRef.underlyingActor.monitoringScript shouldBe
-      Some(AwsBatchFileInput("monitoring-in", "s3://path/to/script", DefaultPathBuilder.get("monitoring.sh"), workingDisk))
-  }
-
-  it should "not create a AwsBatchFileInput for the monitoring script, when not specified" in {
-    val workflowDescriptor = BackendWorkflowDescriptor(
-      WorkflowId.randomId(),
-      WdlNamespaceWithWorkflow.load(SampleWdl.EmptyString.asWorkflowSources(DockerAndDiskRuntime).workflowSource,
-        Seq.empty[Draft2ImportResolver]).get.workflow.toWomWorkflowDefinition(isASubworkflow = false).getOrElse(fail("failed to get WomDefinition from WdlWorkflow")),
-      Map.empty,
-      NoOptions,
-      Labels.empty
-    )
-
-    val job: CommandCallNode = workflowDescriptor.callable.graph.nodes.collectFirst({case t: CommandCallNode => t}).get
-    val key = BackendJobDescriptorKey(job, None, 1)
-    val runtimeAttributes = makeRuntimeAttributes(job)
-    val jobDescriptor = BackendJobDescriptor(workflowDescriptor, key, runtimeAttributes, Map.empty, NoDocker, Map.empty)
-
-    val props = Props(new TestableAwsBatchJobExecutionActor(jobDescriptor, Promise(), configuration))
-    val testActorRef = TestActorRef[TestableAwsBatchJobExecutionActor](
-      props, s"TestableAwsBatchJobExecutionActor-${jobDescriptor.workflowDescriptor.id}")
-
-    testActorRef.underlyingActor.monitoringScript shouldBe None
-  }
-
   it should "return log paths for non-scattered call" in {
     val workflowDescriptor = BackendWorkflowDescriptor(
       WorkflowId(UUID.fromString("e6236763-c518-41d0-9688-432549a8bf7c")),

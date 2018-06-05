@@ -55,15 +55,9 @@ final case class AwsBatchJobPaths(override val workflowPaths: AwsBatchWorkflowPa
   // at the time that code runs.
   override def defaultStdoutFilename: String = s"$logBasename-stdout.log"
   override def defaultStderrFilename: String = s"$logBasename-stderr.log"
-  override val scriptFilename: String = s"${AwsBatchJobPaths.AwsBatchExecParamName}.sh"
 
   val logFilename: String = s"$logBasename.log"
   lazy val logPath: Path = callExecutionRoot.resolve(logFilename)
-
-  val monitoringLogFilename: String = s"${AwsBatchJobPaths.AwsBatchMonitoringKey}.log"
-  lazy val monitoringLogPath: Path = callExecutionRoot.resolve(monitoringLogFilename)
-
-  val monitoringScriptFilename: String = s"${AwsBatchJobPaths.AwsBatchMonitoringKey}.sh"
 
   override lazy val customMetadataPaths = Map(
     CallMetadataKeys.BackendLogsPrefix + ":log" -> logPath

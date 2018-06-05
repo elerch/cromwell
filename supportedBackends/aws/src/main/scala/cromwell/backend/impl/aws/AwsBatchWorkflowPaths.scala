@@ -34,7 +34,6 @@ package cromwell.backend.impl.aws
 import software.amazon.awssdk.core.auth.{AwsCredentials}
 import akka.actor.ActorSystem
 import com.typesafe.config.Config
-import cromwell.backend.impl.aws.AwsBatchAsyncBackendJobExecutionActor.WorkflowOptionKeys
 import cromwell.backend.io.WorkflowPaths
 import cromwell.backend.{BackendJobDescriptorKey, BackendWorkflowDescriptor}
 import cromwell.cloudsupport.aws.s3.S3Storage
@@ -76,11 +75,6 @@ case class AwsBatchWorkflowPaths(workflowDescriptor: BackendWorkflowDescriptor,
     } get
 
     authBucket.resolve(s"${workflowDescriptor.rootWorkflowId}_auth.json")
-  }
-
-  val monitoringScriptPath: Option[Path] = workflowOptions.get(WorkflowOptionKeys.MonitoringScript).toOption map { path =>
-    // Fail here if the path exists but can't be built
-    getPath(path).get
   }
 
   override def toJobPaths(workflowPaths: WorkflowPaths, jobKey: BackendJobDescriptorKey): AwsBatchJobPaths = {

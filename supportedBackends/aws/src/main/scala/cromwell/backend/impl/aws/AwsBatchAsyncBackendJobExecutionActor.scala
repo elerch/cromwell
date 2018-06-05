@@ -66,10 +66,6 @@ import scala.util.{Success, Try}
 object AwsBatchAsyncBackendJobExecutionActor {
   val AwsBatchOperationIdKey = "__aws_batch_operation_id"
 
-  object WorkflowOptionKeys {
-    val MonitoringScript = "monitoring_script"
-  }
-
   type AwsBatchPendingExecutionHandle = PendingExecutionHandle[StandardAsyncJob, AwsBatchJob, RunStatus]
 }
 
@@ -319,35 +315,7 @@ class AwsBatchAsyncBackendJobExecutionActor(override val standardParams: Standar
     )
   }
 
-  lazy val monitoringParamName: String = AwsBatchJobPaths.AwsBatchMonitoringKey
-  lazy val localMonitoringLogPath: Path = DefaultPathBuilder.get(callPaths.monitoringLogFilename)
-  lazy val localMonitoringScriptPath: Path = DefaultPathBuilder.get(callPaths.monitoringScriptFilename)
-
-  // TODO: Determine the necessity for this monitoring stuff
-  lazy val monitoringScript: Option[AwsBatchInput] = {
-    // callPaths.workflowPaths.monitoringScriptPath map { path =>
-    //   AwsBatchFileInput(s"$monitoringParamName-in", path.pathAsString, localMonitoringScriptPath, workingDisk)
-    // }
-    None
-  }
-
-  lazy val monitoringOutput: Option[AwsBatchFileOutput] = monitoringScript map { _ =>
-    AwsBatchFileOutput(s"$monitoringParamName-out",
-      callPaths.monitoringLogPath.pathAsString, localMonitoringLogPath, workingDisk)
-  }
-
   override lazy val commandDirectory: Path = AwsBatchWorkingDisk.MountPoint
-
-  private val DockerMonitoringLogPath: Path = AwsBatchWorkingDisk.MountPoint.resolve(callPaths.monitoringLogFilename)
-  private val DockerMonitoringScriptPath: Path = AwsBatchWorkingDisk.MountPoint.resolve(callPaths.monitoringScriptFilename)
-
-  override def scriptPreamble: String = {
-    if (monitoringOutput.isDefined) {
-      s"""|touch $DockerMonitoringLogPath
-          |chmod u+x $DockerMonitoringScriptPath
-          |$DockerMonitoringScriptPath > $DockerMonitoringLogPath &""".stripMargin
-    } else ""
-  }
 
   override def globParentDirectory(womGlobFile: WomGlobFile): Path = {
     val (_, disk) = relativePathAndVolume(womGlobFile.value, runtimeAttributes.disks)
