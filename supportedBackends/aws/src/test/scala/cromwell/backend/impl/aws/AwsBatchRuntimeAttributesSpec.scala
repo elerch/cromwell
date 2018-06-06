@@ -36,12 +36,13 @@ import cromwell.backend.impl.aws.io.{AwsBatchVolume, AwsBatchWorkingDisk}
 import cromwell.backend.validation.{ContinueOnReturnCodeFlag, ContinueOnReturnCodeSet}
 import cromwell.backend.{RuntimeAttributeDefinition}
 import cromwell.core.WorkflowOptions
+import eu.timepit.refined.numeric.Positive
+import eu.timepit.refined.refineMV
 import org.scalatest.{Matchers, WordSpecLike}
 import org.slf4j.helpers.NOPLogger
 import org.specs2.mock.Mockito
 import spray.json._
-import wdl4s.parser.MemoryUnit
-import wom.format.MemorySize
+import squants.information.Gigabytes
 import wom.types._
 import wom.values._
 
@@ -53,8 +54,9 @@ class AwsBatchRuntimeAttributesSpec extends WordSpecLike with Matchers with Mock
     )))
   }
 
-  val expectedDefaults = new AwsBatchRuntimeAttributes(1, Vector("us-east-1a", "us-east-1b"),
-    MemorySize(2, MemoryUnit.GB), Vector(AwsBatchWorkingDisk()), "ubuntu:latest", "arn::::", false,
+  val expectedDefaults = new AwsBatchRuntimeAttributes(refineMV[Positive](1), Vector("us-east-1a", "us-east-1b"),
+
+    Gigabytes(2), Vector(AwsBatchWorkingDisk()), "ubuntu:latest", "arn::::", false,
     ContinueOnReturnCodeSet(Set(0)), false)
 
   "AwsBatchRuntimeAttributes" should {
@@ -131,13 +133,13 @@ class AwsBatchRuntimeAttributesSpec extends WordSpecLike with Matchers with Mock
 
     "validate a valid cpu entry" in {
       val runtimeAttributes = Map("docker" -> WomString("ubuntu:latest"), "cpu" -> WomInteger(2))
-      val expectedRuntimeAttributes = expectedDefaults.copy(cpu = 2)
+      val expectedRuntimeAttributes = expectedDefaults.copy(cpu = refineMV[Positive](2))
       assertAwsBatchRuntimeAttributesSuccessfulCreation(runtimeAttributes, expectedRuntimeAttributes)
     }
 
     "validate a valid cpu string entry" in {
       val runtimeAttributes = Map("docker" -> WomString("ubuntu:latest"), "cpu" -> WomString("2"))
-      val expectedRuntimeAttributes = expectedDefaults.copy(cpu = 2)
+      val expectedRuntimeAttributes = expectedDefaults.copy(cpu = refineMV[Positive](2))
       assertAwsBatchRuntimeAttributesSuccessfulCreation(runtimeAttributes, expectedRuntimeAttributes)
     }
 
@@ -193,7 +195,7 @@ class AwsBatchRuntimeAttributesSpec extends WordSpecLike with Matchers with Mock
 
     "validate a valid memory entry" in {
       val runtimeAttributes = Map("docker" -> WomString("ubuntu:latest"), "memory" -> WomString("1 GB"))
-      val expectedRuntimeAttributes = expectedDefaults.copy(memory = MemorySize.parse("1 GB").get)
+      val expectedRuntimeAttributes = expectedDefaults.copy(memory = Gigabytes(1))
       assertAwsBatchRuntimeAttributesSuccessfulCreation(runtimeAttributes, expectedRuntimeAttributes)
     }
 
@@ -224,7 +226,7 @@ class AwsBatchRuntimeAttributesSpec extends WordSpecLike with Matchers with Mock
         """.stripMargin.parseJson.asInstanceOf[JsObject]
 
       val workflowOptions = WorkflowOptions.fromJsonObject(workflowOptionsJson).get
-      val expectedRuntimeAttributes = expectedDefaults.copy(cpu = 2)
+      val expectedRuntimeAttributes = expectedDefaults.copy(cpu = refineMV[Positive](2))
       assertAwsBatchRuntimeAttributesSuccessfulCreation(runtimeAttributes, expectedRuntimeAttributes, workflowOptions)
     }
 
@@ -238,7 +240,7 @@ class AwsBatchRuntimeAttributesSpec extends WordSpecLike with Matchers with Mock
         """.stripMargin.parseJson.asInstanceOf[JsObject]
 
       val workflowOptions = WorkflowOptions.fromJsonObject(workflowOptionsJson).get
-      val expectedRuntimeAttributes = expectedDefaults.copy(cpu = 4)
+      val expectedRuntimeAttributes = expectedDefaults.copy(cpu = refineMV[Positive](4))
       assertAwsBatchRuntimeAttributesSuccessfulCreation(runtimeAttributes, expectedRuntimeAttributes, workflowOptions)
     }
 
@@ -252,7 +254,7 @@ class AwsBatchRuntimeAttributesSpec extends WordSpecLike with Matchers with Mock
         """.stripMargin.parseJson.asInstanceOf[JsObject]
 
       val workflowOptions = WorkflowOptions.fromJsonObject(workflowOptionsJson).get
-      val expectedRuntimeAttributes = expectedDefaults.copy(cpu = 4)
+      val expectedRuntimeAttributes = expectedDefaults.copy(cpu = refineMV[Positive](4))
       assertAwsBatchRuntimeAttributesSuccessfulCreation(runtimeAttributes, expectedRuntimeAttributes, workflowOptions)
     }
   }
