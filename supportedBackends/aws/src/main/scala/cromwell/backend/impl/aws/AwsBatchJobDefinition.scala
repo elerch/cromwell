@@ -74,6 +74,7 @@ trait AwsBatchJobDefinitionBuilder {
       .memory(runtimeAttributes.memory.toMegabytes.toInt)
       .vcpus(runtimeAttributes.cpu##)
       .volumes(runtimeAttributes.disks.map(_.toVolume).asJava)
+      .mountPoints(runtimeAttributes.disks.map(_.toMountPoint).asJava)
   }
 
   def build(commandLine: String, runtimeAttributes: AwsBatchRuntimeAttributes, docker: String): AwsBatchJobDefinition

@@ -32,7 +32,7 @@ package cromwell.backend.impl.aws.io
 
 import cats.data.Validated._
 import cats.syntax.validated._
-import software.amazon.awssdk.services.batch.model.{Volume, Host}
+import software.amazon.awssdk.services.batch.model.{MountPoint, Volume, Host}
 import cromwell.core.path.{DefaultPathBuilder, Path}
 import common.exception.MessageAggregation
 import common.validation.ErrorOr._
@@ -51,7 +51,7 @@ import scala.util.matching.Regex
 
 object AwsBatchVolume {
   val Identifier = "[a-zA-Z0-9-_]{1,255}"
-  val Directory = """/[^\s]+""" 
+  val Directory = """/[^\s]+"""
   val WorkingDiskPattern: Regex = s"""${AwsBatchWorkingDisk.Name}\\s+($Identifier)""".r
   val MountedDiskPattern: Regex = s"""($Directory)\\s+($Identifier)""".r
   val LocalDiskPattern: Regex = s"""local-disk""".r
@@ -89,6 +89,13 @@ trait AwsBatchVolume {
       .builder
       .name(name)
       .host(Host.builder.sourcePath(mountPoint.toAbsolutePath.pathAsString).build)
+      .build
+  }
+  def toMountPoint: MountPoint = {
+    MountPoint
+      .builder
+      .containerPath(mountPoint.toAbsolutePath.pathAsString)
+      .sourceVolume(name)
       .build
   }
 }
