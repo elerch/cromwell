@@ -45,7 +45,7 @@ task hello {
     String message = read_string(stdout())
   }
   runtime {
-    docker: "alpine:latest"
+    docker: "ubuntu:latest"
   }
 }
 
@@ -109,21 +109,13 @@ backend {
         // Base bucket for workflow executions
         root = "s3://<s3-bucket-name>/cromwell-execution"
 
-        // Polling for completion backs-off gradually for slower-running jobs.
-        // This is the maximum polling interval (in seconds):
-        maximum-polling-interval = 600
-
-        // Optional Dockerhub Credentials. Can be used to access private docker images.
-        dockerhub {
-          // account = ""
-          // token = ""
-        }
-
         // A reference to an auth defined in the `aws` stanza at the top.  This auth is used to create
-        // Pipelines and manipulate auth JSONs.
+        // Jobs and manipulate auth JSONs.
         auth = "default"
-        // Endpoint for APIs, no reason to change this under normal circumstances.
-        endpoint-url = ""
+
+        default-runtime-attributes {
+          queueArn: "<your arn here>"
+        }
 
         filesystems {
           s3 {
