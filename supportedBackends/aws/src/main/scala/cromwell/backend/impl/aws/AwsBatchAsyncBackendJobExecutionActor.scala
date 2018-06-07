@@ -130,10 +130,10 @@ class AwsBatchAsyncBackendJobExecutionActor(override val standardParams: Standar
       case Valid(s) => s
       case errors => new RuntimeException(errors.toList.mkString(", "))
     }
-
     AwsBatchJob(jobDescriptor, runtimeAttributes,
                                   instantiatedCommand.commandString,
                                   script.toString,
+                                  rcPath.toString, executionStdout, executionStderr,
                                   Seq.empty[AwsBatchParameter])
   }
   /* Tries to abort the job in flight
@@ -376,11 +376,11 @@ class AwsBatchAsyncBackendJobExecutionActor(override val standardParams: Standar
     //       a failed job, so not sure it's a real problem at this time
     Log.info("Job Complete. Exit code: " + job.rc(detail))
     Log.info("Output path: " + jobPaths.standardPaths.output.toString)
-
+    val (rc, stdout, stderr) = AwsBatchJob.parseOutput(job.output(detail))
     // TODO: Is this the right place to be writing out to S3?
-    jobPaths.standardPaths.output.write(job.output(detail))
-    jobPaths.standardPaths.error.touch()
-    jobPaths.returnCode.write(job.rc(detail).toString)
+    jobPaths.standardPaths.output.write(stdout)
+    jobPaths.standardPaths.error.write(stderr)
+    jobPaths.returnCode.write(rc.toString)
   }
 
 
