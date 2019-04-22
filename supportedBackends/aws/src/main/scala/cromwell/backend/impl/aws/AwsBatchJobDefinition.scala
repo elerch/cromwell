@@ -97,8 +97,15 @@ trait AwsBatchJobDefinitionBuilder {
     environment.append(gzipKeyValuePair("AWS_CROMWELL_INPUTS", inputinfo))
     environment.append(buildKVPair("AWS_CROMWELL_OUTPUTS",outputinfo))
 
+    environment.append(buildKVPair("AWS_CROMWELL_CMD_BUCKET",context.cmdBucket))
+    environment.append(buildKVPair("AWS_CROMWELL_CMD_KEY",context.cmdKey))
+    environment.append(buildKVPair("AWS_CROMWELL_CMD_IMAGE",context.runtimeAttributes.dockerImage))
+
     builder
-      .command(packCommand("/bin/bash", "-c", context.commandText).asJava)
+      .command(packCommand(context.cmdBucket match {
+        case bucket if bucket != "" => "/bin/sh"
+        case bucket if bucket == "" => "/bin/bash"
+      }, "-c", context.commandText).asJava)
       .memory(context.runtimeAttributes.memory.to(MemoryUnit.MB).amount.toInt)
       .vcpus(context.runtimeAttributes.cpu##)
       .volumes(context.runtimeAttributes.disks.map(_.toVolume(context.uniquePath)).asJava)
@@ -179,4 +186,7 @@ case class AwsBatchJobDefinitionContext(
             jobDescriptor: BackendJobDescriptor,
             jobPaths: JobPaths,
             inputs: Set[AwsBatchInput],
-            outputs: Set[AwsBatchFileOutput])
+            outputs: Set[AwsBatchFileOutput],
+            cmdBucket: String,
+            cmdKey: String
+          )

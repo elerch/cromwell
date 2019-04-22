@@ -30,8 +30,6 @@
  */
 package cromwell.backend.impl.aws
 
-import java.security.MessageDigest
-
 import cats.data.{Kleisli, ReaderT}
 import cats.data.Kleisli._
 import cats.data.ReaderT._
@@ -76,6 +74,10 @@ final case class AwsBatchJob(jobDescriptor: BackendJobDescriptor, // WDL/CWL
                              configRegion: Option[Region]
                              ) {
 
+  // TODO: This should be config
+  val s3CommandKeyPrefix = "mycommandKey"
+  val s3CommandKeyBucket = "emil"
+
   val Log = LoggerFactory.getLogger(AwsBatchJob.getClass)
   // TODO: Auth, endpoint
   lazy val client = {
@@ -90,40 +92,41 @@ final case class AwsBatchJob(jobDescriptor: BackendJobDescriptor, // WDL/CWL
   }
 
   lazy val reconfiguredScript = {
-    // We'll use the MD5 of the dockerRc so the boundary is "random" but consistent
-    val boundary = MessageDigest.getInstance("MD5").digest(dockerRc.getBytes).map("%02x".format(_)).mkString
-
-    // NOTE: We are assuming the presence of a volume named "local-disk".
-    //       This requires a custom AMI with the volume defined. But, since
-    //       we need a custom AMI anyway for any real workflow, we just need
-    //       to make sure this requirement is documented.
+    // The idea here is to inject a statically linked docker executable
+    // Docker builds these and makes these available here: https://download.docker.com/linux/static/stable/x86_64/
+    // We can control this by dowloading and tar extract to
+    // tar -O -xf docker-18.09.5.tgz docker/docker > path-to-docker-exec
     //
-    //       This MIME format is technically no longer necessary as the
-    //       proxy docker container will manage the stdout/stderr/rc
-    //       stuff being copied correctly, but this can still be useful
-    //       later, so I'm leaving it here for potential future use.
-    script.concat(s"""
-    |echo "MIME-Version: 1.0
-    |Content-Type: multipart/alternative; boundary="$boundary"
-    |
-    |--$boundary
-    |Content-Type: text/plain
-    |Content-Disposition: attachment; filename="rc.txt"
-    |"
-    |cat $dockerRc
-    |echo "--$boundary
-    |Content-Type: text/plain
-    |Content-Disposition: attachment; filename="stdout.txt"
-    |"
-    |cat $dockerStdout
-    |echo "--$boundary
-    |Content-Type: text/plain
-    |Content-Disposition: attachment; filename="stderr.txt"
-    |"
-    |cat $dockerStderr
-    |echo "--$boundary--"
-    |exit $$(cat $dockerRc)
-    """).stripMargin
+    // Since docker is available via volume mounts:
+    //
+    // -v path-to-static-docker:/usr/bin/docker:ro
+    // -v /var/run/docker.sock:/var/run/docker.sock:ro
+    //
+    // We can use docker to access whatever else we might need in the future
+    // in this case, we want the aws cli to be able to pull in the command
+    // text from s3
+    //
+    // We're exec-ing the command from memory, but this might be better off
+    // written to disk and executed? If we are able to do this, we can probably
+    // use !/bin/sh instead of !/bin/bash
+    //
+    // This is the nextflow command:
+    // bash -o pipefail -c trap "{ ret=$?; /home/ec2-user/miniconda/bin/aws s3 cp --only-show-errors .command.log s3://aws-nextflow-demo-us-east-2/runs/e7/eb6fdba31092b6d4cfb66326dc011a/.command.log%7C%7Ctrue; exit $ret; }" EXIT; /home/ec2-user/miniconda/bin/aws s3 cp --only-show-errors s3://aws-nextflow-demo-us-east-2/runs/e7/eb6fdba31092b6d4cfb66326dc011a/.command.run - | bash 2>&1 | tee .command.log
+    //
+    // However, we **REJECT** this command because the script passed into this
+    // by Cromwell is mostly responsible for all the pipefail/tee/etc
+    s3CommandKeyBucket match {
+      case bucket if bucket == "" => script
+      case bucket if bucket != "" => s"""
+      |!/bin/sh
+      |
+      |cmd=$$(docker run awscli:latest aws s3 cp s3://$s3CommandKeyBucket/$s3CommandKeyPrefix/)
+      |tmp=$(mktemp)
+      |echo $$cmd >> $$tmp
+      |chmod +x $$tmp
+      |$$tmp
+      """
+    }
   }
   def submitJob[F[_]]()(
                        implicit timer: Timer[F],
@@ -182,7 +185,10 @@ final case class AwsBatchJob(jobDescriptor: BackendJobDescriptor, // WDL/CWL
                                                             jobDescriptor,
                                                             jobPaths,
                                                             inputs,
-                                                            outputs)
+                                                            outputs,
+                                                            s3CommandKeyPrefix,
+                                                            s3CommandKeyBucket)
+
     val jobDefinition = jobDefinitionBuilder.build(jobDefinitionContext)
 
     // See:
